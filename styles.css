@@ -68,12 +68,13 @@ select {
 #backgroundLayer {
   position: fixed;
   inset: 0;
-  z-index: -2;
+  z-index: 0;
   background-color: #0f1b2f;
   background-repeat: no-repeat;
   background-position: 50% 50%;
   background-size: cover;
   transition: background 0.28s ease;
+  pointer-events: none;
 }
 
 
@@ -132,6 +133,8 @@ select {
 }
 
 #contentRoot {
+  position: relative;
+  z-index: 10;
   width: min(1320px, calc(100vw - 1.5rem));
   margin: 7vh auto 0;
   display: grid;
