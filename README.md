@@ -1,42 +1,44 @@
 # NewTabCrafter
 
-A lightweight, browser-based new tab page with zero build tools and client-side persistence.
+Uma nova aba leve, executada no browser, sem build tools e com persistencia local no cliente.
 
-## Highlights
+Para a documentacao em ingles, consulte `readme.en.md`.
 
-- Search bar with engine presets, custom engine, and direct URL detection.
-- Main shortcuts grid and apps menu with add/edit/remove/drag reorder.
-- Background modes: solid, gradient, uploaded image, uploaded playlist, random stock.
-- Random stock uses Unsplash search with local category caching and attribution.
-- Theme controls (including component transparency), custom fonts, and UI sizing.
-- Collapsible settings categories.
-- Import/export settings JSON.
-- Localization: `en-US` and `pt-PT`.
+## Destaques
 
-## Tech
+- Barra de pesquisa com motores predefinidos, motor customizado e deteccao de URL direta.
+- Grelha de atalhos principais e menu de apps com adicionar/editar/remover/arrastar.
+- Modos de fundo: cor solida, gradiente, imagem carregada, playlist carregada e stock aleatorio.
+- Stock aleatorio com pesquisa Unsplash, cache local por categoria e atribuicao.
+- Controlo de tema (incluindo transparencia dos componentes), fontes personalizadas e tamanhos de UI.
+- Categorias de definicoes colapsaveis.
+- Importacao/exportacao de definicoes em JSON.
+- Localizacao: `en-US` e `pt-PT`.
 
-- Static app: `index.html`, `styles.css`, `app.js`
-- Storage: browser `localStorage` (`newtab.config.v4`)
+## Tecnologias
 
-## Run locally
+- App estatico: `index.html`, `styles.css`, `app.js`
+- Armazenamento: `localStorage` do browser (`newtab.config`)
+
+## Executar localmente
 
 ```powershell
 cd c:\Users\Ivo\source\repos\newtab-page
 python -m http.server 8080
 ```
 
-Open `http://localhost:8080`.
+Abrir `http://localhost:8080`.
 
-## Deploy (GitHub Pages)
+## Publicar (GitHub Pages)
 
-1. Push this project to your GitHub repository.
-2. In GitHub, open Settings -> Pages.
-3. Set Source to Deploy from a branch.
-4. Select `main` and folder `/ (root)`.
-5. Save and wait for the Pages URL.
+1. Fazer push do projeto para o repositorio GitHub.
+2. No GitHub, abrir Settings -> Pages.
+3. Em Source, escolher Deploy from a branch.
+4. Selecionar `main` e pasta `/ (root)`.
+5. Guardar e aguardar o URL do Pages.
 
-## Notes
+## Notas
 
-- Data is local to each browser profile/device.
-- Use Export/Import to transfer settings.
-- To change default values, edit `defaultConfig` in `app.js`.
+- Os dados ficam locais em cada perfil/dispositivo.
+- Use Export/Import para transferir definicoes.
+- Para alterar valores por defeito, edite `defaultConfig` em `app.js`.

@@ -1,4 +1,4 @@
-const STORAGE_KEY = "newtab.config.v4";
+const STORAGE_KEY = "newtab.config";
 
 const CORNERS = ["top-left", "top-right", "bottom-left", "bottom-right"];
 const CORNER_ICONS = {
