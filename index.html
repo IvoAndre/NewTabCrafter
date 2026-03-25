@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Tab</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,500,0,0" />
+  <link rel="stylesheet" href="styles.css" />
+  <link id="userGoogleFont" rel="stylesheet" href="" disabled />
+  <link id="customFavicon" rel="icon" href="" />
+</head>
+<body class="preload">
+  <div id="backgroundLayer" aria-hidden="true"></div>
+
+  <header id="floatingControls">
+    <button id="appsToggle" class="fab" title="Apps" aria-label="Apps">
+      <span class="material-symbols-outlined">apps</span>
+    </button>
+    <button id="settingsToggle" class="fab profileFab" title="Settings" aria-label="Settings">
+      <span id="settingsGear" class="material-symbols-outlined">settings</span>
+      <img id="profileImage" alt="Profile" class="hidden" />
+    </button>
+  </header>
+
+  <main id="contentRoot">
+    <section id="logoSection" class="logoSection hidden">
+      <img id="logoImage" alt="Logo" />
+    </section>
+
+    <section id="searchSection" class="searchSection">
+      <form id="searchForm" class="searchBar" autocomplete="off">
+        <img id="searchIcon" class="searchIcon" alt="Search engine icon" />
+        <input id="searchInput" type="text" aria-label="Search" />
+        <button class="searchSubmit" type="submit" aria-label="Search">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+      </form>
+    </section>
+
+    <section id="mainShortcutsSection" class="mainShortcutsSection">
+      <div id="mainShortcutsGrid" class="shortcutsGrid"></div>
+    </section>
+  </main>
+
+  <aside id="appsMenu" class="appsMenu hidden" aria-hidden="true">
+    <div id="appsGrid" class="appsGrid"></div>
+  </aside>
+
+  <aside id="unsplashAttribution" class="unsplashAttribution hidden" aria-live="polite">
+    <span id="unsplashAttributionText"></span>
+  </aside>
+
+  <aside id="settingsPane" class="settingsPane hidden" aria-hidden="true">
+    <div id="settingsResizeHandle" class="settingsResizeHandle" aria-hidden="true"></div>
+    <div class="settingsHeader">
+      <h2 data-i18n="settingsTitle">Settings</h2>
+      <button id="closeSettings" class="fab closeBtn" aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="settingsBody">
+      <section>
+        <h3 data-i18n="features">Features</h3>
+        <label class="row"><span data-i18n="addingMode">Adding mode</span><input id="addingMode" type="checkbox" /></label>
+        <label class="row"><span data-i18n="enableSearch">Enable search</span><input id="enableSearch" type="checkbox" /></label>
+        <label class="row"><span data-i18n="enableApps">Enable apps menu</span><input id="enableApps" type="checkbox" /></label>
+        <label class="row"><span data-i18n="enableMainShortcuts">Enable main shortcuts</span><input id="enableMainShortcuts" type="checkbox" /></label>
+        <label class="row"><span data-i18n="enableLogo">Enable logo</span><input id="enableLogo" type="checkbox" /></label>
+      </section>
+
+      <section>
+        <h3 data-i18n="language">Language</h3>
+        <select id="languageSelect">
+          <option value="en-US">English (US)</option>
+          <option value="pt-PT">Português (PT)</option>
+        </select>
+      </section>
+
+      <section>
+        <h3 data-i18n="font">Font</h3>
+        <label class="column"><span data-i18n="fontMode">Mode</span>
+          <select id="fontMode">
+            <option value="system">System</option>
+            <option value="google">Google Fonts CSS URL</option>
+          </select>
+        </label>
+        <label class="column"><span data-i18n="systemFont">System font stack</span><input id="systemFont" type="text" placeholder="Segoe UI, sans-serif" /></label>
+        <label class="column"><span data-i18n="googleFontUrl">Google font URL</span><input id="googleFontUrl" type="text" placeholder="https://fonts.googleapis.com/css2?..." /></label>
+        <label class="column"><span data-i18n="googleFontFamily">CSS font-family name</span><input id="googleFontFamily" type="text" placeholder="Manrope" /></label>
+        <label class="column"><span data-i18n="fontUiSize">UI size (px)</span><input id="fontUiSize" type="number" min="10" max="24" step="1" /></label>
+        <label class="column"><span data-i18n="fontUiWeight">UI weight</span><input id="fontUiWeight" type="number" min="300" max="800" step="100" /></label>
+        <label class="column" data-setting-for="search"><span data-i18n="fontSearchSize">Search size (px)</span><input id="fontSearchSize" type="number" min="12" max="34" step="1" /></label>
+        <label class="column" data-setting-for="search"><span data-i18n="fontSearchWeight">Search weight</span><input id="fontSearchWeight" type="number" min="300" max="900" step="100" /></label>
+        <label class="column" data-setting-for="mainShortcuts"><span data-i18n="fontShortcutSize">Shortcut text size (px)</span><input id="fontShortcutSize" type="number" min="10" max="24" step="1" /></label>
+        <label class="column" data-setting-for="mainShortcuts"><span data-i18n="fontShortcutWeight">Shortcut text weight</span><input id="fontShortcutWeight" type="number" min="300" max="900" step="100" /></label>
+        <label class="column"><span data-i18n="fontSettingsWeight">Settings text weight</span><input id="fontSettingsWeight" type="number" min="300" max="900" step="100" /></label>
+        <label class="column" data-setting-for="search"><span data-i18n="searchFontFamily">Search font family</span><input id="searchFontFamily" type="text" placeholder="inherit" /></label>
+        <label class="column" data-setting-for="mainShortcuts"><span data-i18n="shortcutFontFamily">Shortcut font family</span><input id="shortcutFontFamily" type="text" placeholder="inherit" /></label>
+        <label class="column"><span data-i18n="settingsFontFamily">Settings font family</span><input id="settingsFontFamily" type="text" placeholder="inherit" /></label>
+      </section>
+
+      <section>
+        <h3 data-i18n="theme">Theme</h3>
+        <label class="column"><span data-i18n="themeMode">Mode</span>
+          <select id="themeMode">
+            <option value="system">System (auto)</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label class="column"><span data-i18n="componentBg">Component color</span><input id="componentColor" type="color" /></label>
+        <label class="column"><span data-i18n="componentOpacity">Component transparency (%)</span><div class="rangeRow"><input id="componentOpacity" type="range" min="0" max="100" step="1" /><input id="componentOpacityValue" type="number" min="0" max="100" step="1" /></div></label>
+        <label class="column"><span data-i18n="componentText">Text color</span><input id="componentTextColor" type="color" /></label>
+        <label class="column"><span data-i18n="componentBorder">Border color</span><input id="componentBorderColor" type="color" /></label>
+      </section>
+
+      <section>
+        <h3 data-i18n="background">Background</h3>
+        <label class="column"><span data-i18n="backgroundType">Type</span>
+          <select id="backgroundType">
+            <option value="color">Solid color</option>
+            <option value="gradient">Gradient</option>
+            <option value="image">Uploaded image</option>
+            <option value="random">Random stock</option>
+            <option value="playlist">Random from uploaded list</option>
+          </select>
+        </label>
+        <label class="column" data-bg-field="color"><span data-i18n="backgroundColor">Color</span><input id="backgroundColor" type="color" /></label>
+        <label class="column" data-bg-field="gradientDegree"><span data-i18n="gradientDegree">Degrees</span>
+          <div class="rangeRow"><input id="gradientDegree" type="range" min="0" max="360" step="1" /><input id="gradientDegreeValue" type="number" step="1" /></div>
+        </label>
+        <label class="column" data-bg-field="gradientColors"><span data-i18n="gradientColors">Colors (comma separated)</span><input id="gradientColors" type="text" placeholder="#355ca0, #0f1b2f" /></label>
+        <label class="column" data-bg-field="gradientBlur"><span data-i18n="gradientBlur">Gradient blur (px)</span><div class="rangeRow"><input id="gradientBlur" type="range" min="0" max="40" step="1" /><input id="gradientBlurValue" type="number" step="1" /></div></label>
+        <label class="column" data-bg-field="imageData"><span data-i18n="uploadBackground">Upload image</span><input id="backgroundImageUpload" type="file" accept="image/*" /></label>
+        <label class="column" data-bg-field="randomCategory"><span data-i18n="randomCategory">Random category</span>
+          <select id="randomCategory">
+            <option value="nature">Nature</option>
+            <option value="city">City</option>
+            <option value="tech">Tech</option>
+            <option value="minimal">Minimal</option>
+            <option value="space">Space</option>
+          </select>
+        </label>
+        <label class="column" data-bg-field="imagePositionX"><span data-i18n="imagePosX">Image X</span><div class="rangeRow"><input id="backgroundPosX" type="range" min="-300" max="300" step="1" /><input id="backgroundPosXValue" type="number" step="1" /></div></label>
+        <label class="column" data-bg-field="imagePositionY"><span data-i18n="imagePosY">Image Y</span><div class="rangeRow"><input id="backgroundPosY" type="range" min="-300" max="300" step="1" /><input id="backgroundPosYValue" type="number" step="1" /></div></label>
+        <label class="column" data-bg-field="imageScale"><span data-i18n="imageScale">Image zoom</span><div class="rangeRow"><input id="backgroundScale" type="range" min="10" max="1000" step="1" /><input id="backgroundScaleValue" type="number" step="1" /></div></label>
+        <label class="column" data-bg-field="playlistUpload"><span data-i18n="playlistUpload">Upload list images</span><input id="playlistUpload" type="file" accept="image/*" multiple /></label>
+        <label class="column" data-bg-field="playlistSelect"><span data-i18n="playlistSelect">List image</span><select id="playlistSelect"></select></label>
+        <label class="column" data-bg-field="playlistShuffle"><span data-i18n="playlistShuffle">Pick random now</span><button id="playlistShuffle" type="button">Shuffle</button></label>
+        <label class="column" data-bg-field="playlistRemove"><span data-i18n="playlistRemove">Remove selected image</span><button id="playlistRemove" type="button">Remove</button></label>
+        <label class="column" data-bg-field="playlistPosX"><span data-i18n="imagePosX">Image X</span><div class="rangeRow"><input id="playlistPosX" type="range" min="-300" max="300" step="1" /><input id="playlistPosXValue" type="number" step="1" /></div></label>
+        <label class="column" data-bg-field="playlistPosY"><span data-i18n="imagePosY">Image Y</span><div class="rangeRow"><input id="playlistPosY" type="range" min="-300" max="300" step="1" /><input id="playlistPosYValue" type="number" step="1" /></div></label>
+        <label class="column" data-bg-field="playlistScale"><span data-i18n="imageScale">Image zoom</span><div class="rangeRow"><input id="playlistScale" type="range" min="10" max="1000" step="1" /><input id="playlistScaleValue" type="number" step="1" /></div></label>
+      </section>
+
+      <section id="logoSettingsSection" data-setting-for="logo">
+        <h3 data-i18n="logo">Logo</h3>
+        <label class="row"><span data-i18n="showLogo">Show logo</span><input id="showLogo" type="checkbox" /></label>
+        <label class="column"><span data-i18n="uploadLogo">Upload logo</span><input id="logoUpload" type="file" accept="image/*" /></label>
+        <label class="column"><span data-i18n="logoSize">Logo size</span><div class="rangeRow"><input id="logoSize" type="range" min="80" max="420" step="2" /><input id="logoSizeValue" type="number" min="80" max="420" step="2" /></div></label>
+        <label class="column"><span data-i18n="logoPosY">Logo vertical offset</span><div class="rangeRow"><input id="logoPosY" type="range" min="-80" max="120" step="1" /><input id="logoPosYValue" type="number" min="-80" max="120" step="1" /></div></label>
+      </section>
+
+      <section data-setting-for="search">
+        <h3 data-i18n="searchLayout">Search layout</h3>
+        <label class="column"><span data-i18n="searchOffsetY">Search offset Y</span><div class="rangeRow"><input id="searchOffsetY" type="range" min="-220" max="220" step="1" /><input id="searchOffsetYValue" type="number" step="1" /></div></label>
+      </section>
+
+      <section data-setting-for="search">
+        <h3 data-i18n="searchEngine">Search</h3>
+        <label class="column"><span data-i18n="enginePreset">Engine</span>
+          <select id="enginePreset">
+            <option value="duckduckgo">DuckDuckGo</option>
+            <option value="google">Google</option>
+            <option value="bing">Bing</option>
+            <option value="brave">Brave</option>
+            <option value="startpage">Startpage</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <div id="customEngineFields" class="hidden">
+          <label class="column"><span data-i18n="engineName">Name</span><input id="customEngineName" type="text" /></label>
+          <label class="column"><span data-i18n="searchUrl">Search URL</span><input id="customEngineUrl" type="text" placeholder="https://example.com/search?q={query}" /></label>
+        </div>
+        <label class="column"><span data-i18n="engineIconMode">Icon</span>
+          <select id="engineIconMode">
+            <option value="preset">Preset</option>
+            <option value="favicon">Favicon</option>
+            <option value="custom">Uploaded</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+        <label class="column" id="engineIconUploadWrap"><span data-i18n="uploadEngineIcon">Upload icon</span><input id="engineIconUpload" type="file" accept="image/*" /></label>
+        <label class="column" id="engineIconScaleWrap"><span data-i18n="imageScale">Image zoom</span><div class="rangeRow"><input id="engineIconScale" type="range" min="80" max="220" step="1" /><input id="engineIconScaleValue" type="number" min="80" max="220" step="1" /></div></label>
+      </section>
+
+      <section>
+        <h3 data-i18n="layout">Layout</h3>
+        <label class="iconCornersGroup">
+          <span data-i18n="appsCorner">Apps corner</span>
+          <div id="appsCornerPicker" class="cornerPicker" data-target="apps"></div>
+        </label>
+        <label class="iconCornersGroup">
+          <span data-i18n="settingsCorner">Settings corner</span>
+          <div id="settingsCornerPicker" class="cornerPicker" data-target="settings"></div>
+        </label>
+        <label class="column" data-setting-for="appsMenu"><span data-i18n="appsColumns">Apps columns</span><input id="appsColumns" type="number" min="2" max="8" /></label>
+        <label class="column" data-setting-for="mainShortcuts"><span data-i18n="mainColumns">Main shortcuts per row</span><input id="mainColumns" type="number" min="1" max="12" /></label>
+        <label class="column" data-setting-for="mainShortcuts"><span data-i18n="shortcutTileSize">Shortcut tile size (px)</span><input id="shortcutTileSize" type="number" min="72" max="180" /></label>
+        <label class="column" data-setting-for="mainShortcuts"><span data-i18n="mainRows">Main rows (x10)</span><input id="mainRows" type="number" min="1" max="10" /></label>
+      </section>
+
+      <section id="shortcutStyleSection">
+        <h3 data-i18n="shortcutStyle">Shortcuts</h3>
+        <label class="row" data-setting-for="appsMenu"><span data-i18n="appsShowText">Apps text</span><input id="appsShowText" type="checkbox" /></label>
+        <label class="row" data-setting-for="mainShortcuts"><span data-i18n="mainShowText">Main text</span><input id="mainShowText" type="checkbox" /></label>
+      </section>
+
+      <section>
+        <h3 data-i18n="profile">Settings button</h3>
+        <label class="column"><span data-i18n="settingsButtonStyle">Style</span>
+          <select id="settingsButtonStyle">
+            <option value="gear">Gear</option>
+            <option value="profile">Profile image</option>
+          </select>
+        </label>
+        <label class="column" id="profileUploadWrap"><span data-i18n="uploadProfile">Upload profile</span><input id="profileUpload" type="file" accept="image/*" /></label>
+        <label class="column" id="profileScaleWrap"><span data-i18n="imageScale">Image zoom</span><div class="rangeRow"><input id="profileScale" type="range" min="80" max="220" step="1" /><input id="profileScaleValue" type="number" min="80" max="220" step="1" /></div></label>
+      </section>
+
+      <section>
+        <h3 data-i18n="data">Data</h3>
+        <div class="dataActions">
+          <button id="exportSettings" type="button"><span class="material-symbols-outlined">download</span><span data-i18n="exportSettings">Export</span></button>
+          <button id="resetSettings" type="button"><span class="material-symbols-outlined">restart_alt</span><span data-i18n="resetSettings">Reset</span></button>
+          <label class="importLabel" title="Import">
+            <span class="material-symbols-outlined">upload</span>
+            <span data-i18n="importSettings">Import</span>
+            <input id="importSettings" type="file" accept="application/json" />
+          </label>
+          <label class="importLabel" title="Favicon">
+            <span class="material-symbols-outlined">image</span>
+            <span data-i18n="customFavicon">Favicon</span>
+            <input id="faviconUpload" type="file" accept="image/*" />
+          </label>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <div id="shortcutModalBackdrop" class="modalBackdrop hidden" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true">
+      <h3 id="modalTitle">Shortcut</h3>
+      <form id="shortcutModalForm" class="modalForm">
+        <input id="modalShortcutName" type="text" placeholder="Name" required />
+        <input id="modalShortcutUrl" type="text" placeholder="https://" required />
+        <label class="column">
+          <span>Open in</span>
+          <select id="modalShortcutOpenIn">
+            <option value="current">Current tab</option>
+            <option value="new">New tab</option>
+          </select>
+        </label>
+        <label class="column">
+          <span>Icon</span>
+          <select id="modalShortcutIconMode">
+            <option value="favicon">Favicon</option>
+            <option value="custom">Uploaded</option>
+            <option value="badge">Badge</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+        <label class="column" id="modalShortcutIconUploadWrap">
+          <span>Upload icon</span>
+          <input id="modalShortcutIconUpload" type="file" accept="image/*" />
+        </label>
+        <label class="column" id="modalShortcutFaviconUrlWrap">
+          <span>Favicon URL (optional)</span>
+          <input id="modalShortcutFaviconUrl" type="text" placeholder="https://example.com/favicon.ico" />
+        </label>
+        <label class="column" id="modalShortcutIconScaleWrap">
+          <span>Icon zoom</span>
+          <div class="rangeRow"><input id="modalShortcutIconScale" type="range" min="80" max="220" step="1" /><input id="modalShortcutIconScaleValue" type="number" min="80" max="220" step="1" /></div>
+        </label>
+        <label class="column" id="modalShortcutBadgeTextWrap">
+          <span>Badge text (1-2)</span>
+          <input id="modalShortcutBadgeText" type="text" maxlength="2" />
+        </label>
+        <label class="column" id="modalShortcutBadgeColor1Wrap">
+          <span>Badge color 1</span>
+          <input id="modalShortcutBadgeColor1" type="text" placeholder="#4f7cff" />
+        </label>
+        <label class="column" id="modalShortcutBadgeColor2Wrap">
+          <span>Badge color 2 (optional)</span>
+          <input id="modalShortcutBadgeColor2" type="text" placeholder="#223a80" />
+        </label>
+        <div class="modalActions">
+          <button type="button" id="modalCancel"><span class="material-symbols-outlined">close</span></button>
+          <button type="submit" id="modalSave"><span class="material-symbols-outlined">check</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

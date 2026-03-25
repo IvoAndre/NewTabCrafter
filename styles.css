@@ -1,0 +1,636 @@
+:root {
+  --font: "Segoe UI", sans-serif;
+  --font-search: var(--font);
+  --font-shortcut: var(--font);
+  --font-settings: var(--font);
+  --font-ui-size: 14px;
+  --font-ui-weight: 500;
+  --font-search-size: 17px;
+  --font-shortcut-size: 14px;
+  --font-search-weight: 500;
+  --font-shortcut-weight: 500;
+  --font-settings-weight: 500;
+  --main-shortcut-size: 112px;
+  --main-shortcut-columns: 10;
+  --search-offset-y: 0px;
+  --surface: rgba(15, 23, 39, 0.56);
+  --surface-strong: rgba(15, 23, 39, 0.76);
+  --surface-border: rgba(255, 255, 255, 0.24);
+  --surface-text: #f3f6ff;
+  --surface-muted: #b4bfd7;
+  --focus: #ffd166;
+  --shadow: 0 18px 46px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--font-ui-size);
+  font-weight: var(--font-ui-weight);
+  color: var(--surface-text);
+  background: #0f1726;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body.preload {
+  visibility: hidden;
+}
+
+.settingsPane,
+.settingsPane input,
+.settingsPane select,
+.settingsPane button {
+  font-family: var(--font-settings);
+  font-weight: var(--font-settings-weight);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.material-symbols-outlined {
+  font-size: 22px;
+  line-height: 1;
+}
+
+#backgroundLayer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-color: #0f1b2f;
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: cover;
+  transition: background 0.28s ease;
+}
+
+
+#floatingControls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.unsplashAttribution {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 32;
+  max-width: min(58vw, 620px);
+  border: 1px solid var(--surface-border);
+  border-radius: 9px;
+  background: var(--surface-strong);
+  color: var(--surface-text);
+  padding: 0.38rem 0.58rem;
+  line-height: 1.25;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.unsplashAttribution a {
+  color: inherit;
+}
+
+.fab {
+  pointer-events: auto;
+  position: fixed;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--surface-text);
+  backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.profileFab {
+  overflow: hidden;
+  padding: 0;
+}
+
+#profileImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#contentRoot {
+  width: min(1320px, calc(100vw - 1.5rem));
+  margin: 7vh auto 0;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.logoSection {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-height: 30px;
+}
+
+#logoImage {
+  max-width: min(72vw, 560px);
+  object-fit: cover;
+}
+
+.searchSection {
+  display: flex;
+  justify-content: center;
+  transform: translateY(var(--search-offset-y));
+}
+
+.searchBar {
+  width: min(840px, 100%);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 0.64rem 0.92rem;
+  box-shadow: var(--shadow);
+}
+
+.searchBar.no-icon {
+  grid-template-columns: 1fr auto;
+}
+
+.searchIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.searchSubmit {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--surface-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+#searchInput {
+  font-family: var(--font-search);
+  font-weight: var(--font-search-weight);
+  border: none;
+  background: transparent;
+  color: var(--surface-text);
+  font-size: var(--font-search-size);
+}
+
+#searchInput::placeholder {
+  color: var(--surface-muted);
+}
+
+#searchInput:focus {
+  outline: none;
+}
+
+.mainShortcutsSection {
+  display: flex;
+  justify-content: center;
+}
+
+.shortcutsGrid,
+.appsGrid {
+  display: grid;
+  gap: 0.86rem;
+}
+
+#mainShortcutsGrid {
+  width: 100%;
+  max-width: calc(var(--main-shortcut-columns) * var(--main-shortcut-size) + (var(--main-shortcut-columns) - 1) * 0.86rem);
+  justify-content: center;
+  grid-template-columns: repeat(var(--main-shortcut-columns), var(--main-shortcut-size));
+}
+
+.appsMenu {
+  position: fixed;
+  width: max-content;
+  max-height: calc(100vh - 116px);
+  max-width: calc(100vw - 24px);
+  overflow: auto;
+  padding: 0.8rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+  z-index: 35;
+}
+
+.appsGrid {
+  grid-template-columns: repeat(var(--apps-columns, 4), minmax(var(--main-shortcut-size), var(--main-shortcut-size)));
+}
+
+.shortcutTile {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  background: var(--surface);
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  padding: 0.42rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.shortcutTile.dragging {
+  opacity: 0.55;
+}
+
+.shortcutTile img {
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+}
+
+.shortcutTile .title {
+  font-family: var(--font-shortcut);
+  font-weight: var(--font-shortcut-weight);
+  width: 100%;
+  text-align: center;
+  font-size: var(--font-shortcut-size);
+  line-height: 1.12;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileMenuWrap {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.tileMenuButton {
+  border: none;
+  background: transparent;
+  color: var(--surface-text);
+  padding: 0;
+  display: none;
+  cursor: pointer;
+}
+
+.shortcutTile:hover .tileMenuButton,
+.shortcutTile:focus-within .tileMenuButton {
+  display: inline-flex;
+}
+
+.tileMenu {
+  position: absolute;
+  top: 22px;
+  right: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  overflow: hidden;
+  min-width: 88px;
+  display: none;
+  z-index: 60;
+}
+
+.tileMenu button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--surface-text);
+  text-align: left;
+  padding: 0.38rem 0.5rem;
+  cursor: pointer;
+}
+
+.tileMenu.open {
+  display: block;
+}
+
+.plusTile {
+  font-size: 2rem;
+  color: var(--surface-text);
+}
+
+.settingsPane {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 420px;
+  min-width: min(380px, 100vw);
+  max-width: min(760px, 98vw);
+  height: 100vh;
+  border-left: 1px solid var(--surface-border);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.settingsResizeHandle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.72rem 0.72rem 0.52rem;
+  border-bottom: 1px solid var(--surface-border);
+  flex: 0 0 auto;
+}
+
+.settingsHeader h2 {
+  margin: 0;
+}
+
+.closeBtn {
+  width: 40px;
+  height: 40px;
+  position: static;
+}
+
+.settingsBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overflow-x: hidden;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.82rem;
+}
+
+.settingsBody section {
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.7rem;
+}
+
+.settingsBody h3 {
+  margin: 0 0 0.45rem;
+}
+
+.settingsBody section.collapsibleSection {
+  padding: 0.45rem 0.62rem 0.58rem;
+}
+
+.sectionToggle {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.24rem 0.28rem;
+  cursor: pointer;
+}
+
+.sectionToggle h3 {
+  margin: 0;
+}
+
+.sectionToggle .material-symbols-outlined {
+  transition: transform 0.16s ease;
+}
+
+.collapsibleSection.collapsed .sectionToggle .material-symbols-outlined {
+  transform: rotate(-90deg);
+}
+
+.sectionContent {
+  padding-top: 0.28rem;
+}
+
+.collapsibleSection.collapsed .sectionContent {
+  display: none;
+}
+
+.row,
+.column {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.row {
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.4rem 0;
+}
+
+.column {
+  flex-direction: column;
+  margin-top: 0.42rem;
+}
+
+.iconCornersGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.cornerPicker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.cornerBtn {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--surface-text);
+  cursor: pointer;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cornerBtn.active {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+input,
+select {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 0.42rem 0.52rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--surface-text);
+}
+
+select option {
+  background: #1a2437;
+  color: #f3f6ff;
+}
+
+input[type="color"] {
+  min-height: 34px;
+  padding: 2px;
+}
+
+.dataActions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.dataActions button,
+.importLabel {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  min-width: 42px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--surface-text);
+  cursor: pointer;
+  gap: 0.25rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.rangeRow {
+  display: grid;
+  grid-template-columns: 1fr 84px;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.importLabel input {
+  display: none;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.46);
+  z-index: 85;
+  display: grid;
+  place-items: center;
+}
+
+.modalCard {
+  width: min(430px, calc(100vw - 24px));
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  padding: 0.85rem;
+}
+
+.modalCard h3 {
+  margin: 0 0 0.6rem;
+}
+
+.modalForm {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.modalActions button {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--surface-text);
+  min-width: 40px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.shortcutBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+.shortcutTile:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  #contentRoot {
+    margin-top: 10vh;
+    padding-bottom: 1.2rem;
+  }
+
+  .settingsPane {
+    width: 100vw !important;
+    min-width: 100vw;
+  }
+
+  #mainShortcutsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(var(--main-shortcut-size), var(--main-shortcut-size)));
+  }
+
+  .unsplashAttribution {
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+  }
+}
+
+@media (max-width: 1100px) {
+  #mainShortcutsGrid {
+    max-width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--main-shortcut-size), 100%), var(--main-shortcut-size)));
+  }
+}
