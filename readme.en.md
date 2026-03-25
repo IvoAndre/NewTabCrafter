@@ -40,3 +40,4 @@ Open `http://localhost:8080`.
 - Data is local to each browser profile/device.
 - Use Export/Import to transfer settings.
 - To change default values, edit `defaultConfig` in `app.js`.
+- Random stock mode using Unsplash must follow API terms specified [here](https://unsplash.com/api-terms).

@@ -42,3 +42,4 @@ Abrir `http://localhost:8080`.
 - Os dados ficam locais em cada perfil/dispositivo.
 - Use Export/Import para transferir definicoes.
 - Para alterar valores por defeito, edite `defaultConfig` em `app.js`.
+- O modo de imagens stock via Unsplash deve cumprir os termos da API especificados [aqui](https://unsplash.com/api-terms).
