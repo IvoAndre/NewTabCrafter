@@ -766,9 +766,10 @@ function renderBackground() {
 
   if (bg.type === "image") {
     const scale = Number(bg.scale) || 100;
+    const tileSize = Math.max(Math.abs(scale), 1);
     els.backgroundLayer.style.backgroundColor = "#0f1b2f";
     els.backgroundLayer.style.backgroundImage = bg.imageData ? `url('${escapeSingleQuote(bg.imageData)}')` : "none";
-    els.backgroundLayer.style.backgroundSize = `${Math.max(scale, 1)}%`;
+    els.backgroundLayer.style.backgroundSize = `${tileSize}% auto`;
     els.backgroundLayer.style.backgroundPosition = `${50 + Number(bg.posX || 0)}% ${50 + Number(bg.posY || 0)}%`;
     els.backgroundLayer.style.backgroundRepeat = "repeat";
     els.backgroundLayer.style.filter = "none";
@@ -784,7 +785,8 @@ function renderBackground() {
     const itemPosY = item?.posY ?? 0;
     els.backgroundLayer.style.backgroundColor = "#0f1b2f";
     els.backgroundLayer.style.backgroundImage = item ? `url('${escapeSingleQuote(item.data)}')` : "none";
-    els.backgroundLayer.style.backgroundSize = `${Math.max(Number(itemScale) || 100, 1)}%`;
+    const tileSize = Math.max(Math.abs(Number(itemScale) || 100), 1);
+    els.backgroundLayer.style.backgroundSize = `${tileSize}% auto`;
     els.backgroundLayer.style.backgroundPosition = `${50 + Number(itemPosX)}% ${50 + Number(itemPosY)}%`;
     els.backgroundLayer.style.backgroundRepeat = "repeat";
     els.backgroundLayer.style.filter = "none";
