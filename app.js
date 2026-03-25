@@ -236,8 +236,9 @@ const defaultConfig = {
     gradientColors: ["#365b9f", "#0f1b2f"],
     gradientBlur: 0,
     imageData: "",
-    posX: 50,
-    posY: 50,
+    positionMode: "offset",
+    posX: 0,
+    posY: 0,
     scale: 100,
     randomCategory: "nature",
     randomCache: {},
@@ -546,6 +547,12 @@ function rotatePlaylistSelectionOnBoot() {
 }
 
 function sanitizeConfig() {
+  const hadBackgroundPositionMode = Boolean(
+    config
+    && typeof config === "object"
+    && config.background
+    && Object.prototype.hasOwnProperty.call(config.background, "positionMode")
+  );
   config = deepMerge(structuredClone(defaultConfig), config);
   config.tabTitle = String(config.tabTitle || "").trim() || defaultConfig.tabTitle;
   if (!Array.isArray(config.shortcuts.main)) {
@@ -566,6 +573,7 @@ function sanitizeConfig() {
   if (!config.background.randomCurrentPhoto || typeof config.background.randomCurrentPhoto !== "object") {
     config.background.randomCurrentPhoto = null;
   }
+  migrateBackgroundPositionModel(hadBackgroundPositionMode);
   config.background.randomCategory = normalizeRandomCategory(config.background.randomCategory);
   if (typeof config.features.logo !== "boolean") {
     config.features.logo = true;
@@ -577,6 +585,25 @@ function sanitizeConfig() {
   config.layout.mainRows = clamp(config.layout.mainRows, 1, 10);
   config.shortcuts.main = config.shortcuts.main.map((shortcut) => sanitizeShortcut(shortcut));
   config.shortcuts.apps = config.shortcuts.apps.map((shortcut) => sanitizeShortcut(shortcut));
+}
+
+function migrateBackgroundPositionModel(hadBackgroundPositionMode) {
+  if (hadBackgroundPositionMode) {
+    return;
+  }
+
+  config.background.posX = Number(config.background.posX || 50) - 50;
+  config.background.posY = Number(config.background.posY || 50) - 50;
+
+  if (Array.isArray(config.background.playlist)) {
+    config.background.playlist = config.background.playlist.map((item) => ({
+      ...item,
+      posX: Number(item?.posX || 50) - 50,
+      posY: Number(item?.posY || 50) - 50
+    }));
+  }
+
+  config.background.positionMode = "offset";
 }
 
 function sanitizeShortcut(shortcut) {
@@ -738,12 +765,12 @@ function renderBackground() {
   }
 
   if (bg.type === "image") {
-    const effectiveScale = (bg.scale <= 100 && (bg.posX !== 50 || bg.posY !== 50)) ? 101 : bg.scale;
+    const scale = Number(bg.scale) || 100;
     els.backgroundLayer.style.backgroundColor = "#0f1b2f";
     els.backgroundLayer.style.backgroundImage = bg.imageData ? `url('${escapeSingleQuote(bg.imageData)}')` : "none";
-    els.backgroundLayer.style.backgroundSize = `${effectiveScale}%`;
-    els.backgroundLayer.style.backgroundPosition = `${bg.posX}% ${bg.posY}%`;
-    els.backgroundLayer.style.backgroundRepeat = "no-repeat";
+    els.backgroundLayer.style.backgroundSize = `${Math.max(scale, 1)}%`;
+    els.backgroundLayer.style.backgroundPosition = `${50 + Number(bg.posX || 0)}% ${50 + Number(bg.posY || 0)}%`;
+    els.backgroundLayer.style.backgroundRepeat = scale < 100 ? "repeat" : "no-repeat";
     els.backgroundLayer.style.filter = "none";
     els.backgroundLayer.style.transform = "none";
     renderUnsplashAttribution(null);
@@ -753,14 +780,13 @@ function renderBackground() {
   if (bg.type === "playlist") {
     const item = getSelectedPlaylistItem();
     const itemScale = item?.scale ?? 100;
-    const itemPosX = item?.posX ?? 50;
-    const itemPosY = item?.posY ?? 50;
-    const effectiveScale = (itemScale <= 100 && (itemPosX !== 50 || itemPosY !== 50)) ? 101 : itemScale;
+    const itemPosX = item?.posX ?? 0;
+    const itemPosY = item?.posY ?? 0;
     els.backgroundLayer.style.backgroundColor = "#0f1b2f";
     els.backgroundLayer.style.backgroundImage = item ? `url('${escapeSingleQuote(item.data)}')` : "none";
-    els.backgroundLayer.style.backgroundSize = `${effectiveScale}%`;
-    els.backgroundLayer.style.backgroundPosition = `${itemPosX}% ${itemPosY}%`;
-    els.backgroundLayer.style.backgroundRepeat = "no-repeat";
+    els.backgroundLayer.style.backgroundSize = `${Math.max(Number(itemScale) || 100, 1)}%`;
+    els.backgroundLayer.style.backgroundPosition = `${50 + Number(itemPosX)}% ${50 + Number(itemPosY)}%`;
+    els.backgroundLayer.style.backgroundRepeat = (Number(itemScale) || 100) < 100 ? "repeat" : "no-repeat";
     els.backgroundLayer.style.filter = "none";
     els.backgroundLayer.style.transform = "none";
     renderUnsplashAttribution(null);
@@ -1136,8 +1162,8 @@ function syncForm() {
   els.randomCategory.value = config.background.randomCategory;
   renderPlaylistSelect();
   const selected = getSelectedPlaylistItem();
-  setPairValue(els.playlistPosX, els.playlistPosXValue, selected?.posX ?? 50);
-  setPairValue(els.playlistPosY, els.playlistPosYValue, selected?.posY ?? 50);
+  setPairValue(els.playlistPosX, els.playlistPosXValue, selected?.posX ?? 0);
+  setPairValue(els.playlistPosY, els.playlistPosYValue, selected?.posY ?? 0);
   setPairValue(els.playlistScale, els.playlistScaleValue, selected?.scale ?? 100);
 
   els.showLogo.checked = config.logo.enabled;
@@ -1729,7 +1755,7 @@ function wireEvents() {
     }
   });
   bindRangePair(els.backgroundScale, els.backgroundScaleValue, (value, realtime) => {
-    config.background.scale = Number(value);
+    config.background.scale = clamp(value, 1, 1000);
     if (config.background.type === "image") {
       renderBackground();
     }
@@ -1752,8 +1778,8 @@ function wireEvents() {
         id: crypto.randomUUID(),
         name: file.name,
         data,
-        posX: 50,
-        posY: 50,
+        posX: 0,
+        posY: 0,
         scale: 100
       };
       config.background.playlist.push(item);
@@ -1859,7 +1885,7 @@ function wireEvents() {
     if (!item) {
       return;
     }
-    item.scale = Number(value);
+    item.scale = clamp(value, 1, 1000);
     if (config.background.type === "playlist") {
       renderBackground();
     }
@@ -2073,8 +2099,8 @@ function wireEvents() {
 
 function syncPlaylistControls() {
   const item = getSelectedPlaylistItem();
-  setPairValue(els.playlistPosX, els.playlistPosXValue, item?.posX ?? 50);
-  setPairValue(els.playlistPosY, els.playlistPosYValue, item?.posY ?? 50);
+  setPairValue(els.playlistPosX, els.playlistPosXValue, item?.posX ?? 0);
+  setPairValue(els.playlistPosY, els.playlistPosYValue, item?.posY ?? 0);
   setPairValue(els.playlistScale, els.playlistScaleValue, item?.scale ?? 100);
 }
 
@@ -2120,8 +2146,8 @@ function wireBackgroundDrag() {
 
     if (config.background.type === "playlist") {
       const item = getSelectedPlaylistItem();
-      originX = item?.posX ?? 50;
-      originY = item?.posY ?? 50;
+      originX = item?.posX ?? 0;
+      originY = item?.posY ?? 0;
     } else {
       originX = config.background.posX;
       originY = config.background.posY;
