@@ -513,11 +513,24 @@ function boot() {
   initCollapsibleSections();
   ensureRandomStockPhoto();
   els.body.classList.remove("preload");
+  focusSearchOnBoot();
   if (!didWire) {
     wireEvents();
     didWire = true;
   }
   saveConfig();
+}
+
+function focusSearchOnBoot() {
+  if (!config.features.search || !els.searchInput || els.searchInput.disabled) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    if (document.activeElement === document.body || document.activeElement === null) {
+      els.searchInput.focus({ preventScroll: true });
+      els.searchInput.select();
+    }
+  });
 }
 
 function rotatePlaylistSelectionOnBoot() {
@@ -1009,11 +1022,7 @@ function buildShortcutTile(shortcut, listName, showTextSetting) {
     if (menu.classList.contains("open")) {
       return;
     }
-    if (shortcut.openIn === "new") {
-      window.open(normalizeUrl(shortcut.url), "_blank", "noopener,noreferrer");
-      return;
-    }
-    window.location.href = normalizeUrl(shortcut.url);
+    openShortcutUrl(shortcut);
   });
 
   addDragHandlers(tile, listName);
@@ -2413,6 +2422,33 @@ function normalizeUrl(value) {
     return clean;
   }
   return `https://${clean}`;
+}
+
+function isInIframe() {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
+function openShortcutUrl(shortcut) {
+  const url = normalizeUrl(shortcut?.url || "");
+  if (!url) {
+    return;
+  }
+
+  if (shortcut?.openIn === "new") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (isInIframe()) {
+    window.open(url, "_top");
+    return;
+  }
+
+  window.location.href = url;
 }
 
 function isDirectAddress(value) {
