@@ -396,6 +396,32 @@ select {
   gap: 0.82rem;
 }
 
+.settingsFooter {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--surface-border);
+  padding: 0.56rem 0.8rem 0.62rem;
+  text-align: center;
+}
+
+.repoIconLink {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--surface-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.repoIconLink:hover {
+  color: var(--surface-text);
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .settingsBody section {
   border: 1px solid var(--surface-border);
   border-radius: 12px;

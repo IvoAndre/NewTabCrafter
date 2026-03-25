@@ -1148,10 +1148,11 @@ function initCollapsibleSections() {
     }
 
     section.classList.add("collapsibleSection");
+    section.classList.add("collapsed");
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "sectionToggle";
-    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-expanded", "false");
 
     const icon = document.createElement("span");
     icon.className = "material-symbols-outlined";
