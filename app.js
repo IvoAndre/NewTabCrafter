@@ -371,16 +371,21 @@ const els = {
 
   themeMode: document.getElementById("themeMode"),
   componentColor: document.getElementById("componentColor"),
+  componentColorHex: document.getElementById("componentColorHex"),
   componentOpacity: document.getElementById("componentOpacity"),
   componentOpacityValue: document.getElementById("componentOpacityValue"),
   componentTextColor: document.getElementById("componentTextColor"),
+  componentTextColorHex: document.getElementById("componentTextColorHex"),
   componentBorderColor: document.getElementById("componentBorderColor"),
+  componentBorderColorHex: document.getElementById("componentBorderColorHex"),
 
   backgroundType: document.getElementById("backgroundType"),
   backgroundColor: document.getElementById("backgroundColor"),
+  backgroundColorHex: document.getElementById("backgroundColorHex"),
   gradientDegree: document.getElementById("gradientDegree"),
   gradientDegreeValue: document.getElementById("gradientDegreeValue"),
   gradientColors: document.getElementById("gradientColors"),
+  gradientPreview: document.getElementById("gradientPreview"),
   gradientBlur: document.getElementById("gradientBlur"),
   gradientBlurValue: document.getElementById("gradientBlurValue"),
   backgroundImageUpload: document.getElementById("backgroundImageUpload"),
@@ -673,6 +678,7 @@ function applyThemeAndColors() {
 
 function renderBackground() {
   const bg = config.background;
+  updateGradientPreview();
   els.body.classList.toggle("solid-background", bg.type === "color");
   els.body.classList.toggle("gradient-background", bg.type === "gradient");
 
@@ -1050,15 +1056,28 @@ function syncForm() {
 
   els.themeMode.value = config.theme.mode;
   els.componentColor.value = config.theme.custom.component;
+  if (els.componentColorHex) {
+    els.componentColorHex.value = config.theme.custom.component;
+  }
   setPairValue(els.componentOpacity, els.componentOpacityValue, config.theme.componentAlpha);
   els.componentTextColor.value = config.theme.custom.text;
+  if (els.componentTextColorHex) {
+    els.componentTextColorHex.value = config.theme.custom.text;
+  }
   els.componentBorderColor.value = config.theme.custom.border;
+  if (els.componentBorderColorHex) {
+    els.componentBorderColorHex.value = config.theme.custom.border;
+  }
 
   els.backgroundType.value = config.background.type;
   els.backgroundColor.value = config.background.color;
+  if (els.backgroundColorHex) {
+    els.backgroundColorHex.value = config.background.color;
+  }
   els.gradientDegree.value = String(config.background.gradientDegree);
   els.gradientDegreeValue.value = String(config.background.gradientDegree);
   els.gradientColors.value = config.background.gradientColors.join(", ");
+  updateGradientPreview();
   setPairValue(els.gradientBlur, els.gradientBlurValue, config.background.gradientBlur || 0);
 
   setPairValue(els.backgroundPosX, els.backgroundPosXValue, config.background.posX);
@@ -1110,6 +1129,23 @@ function setPairValue(range, number, value) {
   }
 }
 
+function parseGradientStops(text, fallbackStops) {
+  const parsed = String(text || "").split(",").map((x) => x.trim()).filter(Boolean);
+  return parsed.length >= 2 ? parsed : fallbackStops;
+}
+
+function updateGradientPreview(rawColors) {
+  if (!els.gradientPreview) {
+    return;
+  }
+  const degree = Number(config.background.gradientDegree) || 0;
+  const fallback = Array.isArray(config.background.gradientColors) && config.background.gradientColors.length >= 2
+    ? config.background.gradientColors
+    : ["#365b9f", "#0f1b2f"];
+  const stops = parseGradientStops(rawColors ?? "", fallback);
+  els.gradientPreview.style.background = `linear-gradient(${degree}deg, ${stops.join(", ")})`;
+}
+
 function bindRangePair(range, number, onChange) {
   const apply = (source) => {
     const value = Number(source.value);
@@ -1121,6 +1157,51 @@ function bindRangePair(range, number, onChange) {
   number.addEventListener("input", () => apply(number));
   range.addEventListener("change", () => onChange(Number(range.value), false));
   number.addEventListener("change", () => onChange(Number(number.value), false));
+}
+
+function bindColorHexPair(colorInput, hexInput, onChange) {
+  if (!colorInput || !hexInput) {
+    return;
+  }
+
+  const apply = (value) => {
+    const normalized = normalizeHexColor(value, colorInput.value || "#000000");
+    colorInput.value = normalized;
+    hexInput.value = normalized;
+    onChange(normalized);
+  };
+
+  colorInput.addEventListener("input", () => {
+    hexInput.value = colorInput.value;
+  });
+
+  colorInput.addEventListener("change", () => {
+    apply(colorInput.value);
+  });
+
+  hexInput.addEventListener("change", () => {
+    apply(hexInput.value);
+  });
+
+  hexInput.addEventListener("blur", () => {
+    apply(hexInput.value);
+  });
+}
+
+function normalizeHexColor(value, fallback) {
+  const clean = String(value || "").trim();
+  const full = clean.match(/^#([0-9a-fA-F]{6})$/);
+  if (full) {
+    return `#${full[1]}`;
+  }
+
+  const short = clean.match(/^#([0-9a-fA-F]{3})$/);
+  if (short) {
+    const raw = short[1];
+    return `#${raw[0]}${raw[0]}${raw[1]}${raw[1]}${raw[2]}${raw[2]}`;
+  }
+
+  return String(fallback || "#000000");
 }
 
 function updateBackgroundFieldVisibility() {
@@ -1488,14 +1569,22 @@ function wireEvents() {
     saveConfig();
   });
 
-  [els.componentColor, els.componentTextColor, els.componentBorderColor].forEach((el) => {
-    el.addEventListener("change", () => {
-      config.theme.custom.component = els.componentColor.value;
-      config.theme.custom.text = els.componentTextColor.value;
-      config.theme.custom.border = els.componentBorderColor.value;
-      applyThemeAndColors();
-      saveConfig();
-    });
+  bindColorHexPair(els.componentColor, els.componentColorHex, (value) => {
+    config.theme.custom.component = value;
+    applyThemeAndColors();
+    saveConfig();
+  });
+
+  bindColorHexPair(els.componentTextColor, els.componentTextColorHex, (value) => {
+    config.theme.custom.text = value;
+    applyThemeAndColors();
+    saveConfig();
+  });
+
+  bindColorHexPair(els.componentBorderColor, els.componentBorderColorHex, (value) => {
+    config.theme.custom.border = value;
+    applyThemeAndColors();
+    saveConfig();
   });
 
   bindRangePair(els.componentOpacity, els.componentOpacityValue, (value, realtime) => {
@@ -1518,14 +1607,15 @@ function wireEvents() {
     saveConfig();
   });
 
-  els.backgroundColor.addEventListener("change", () => {
-    config.background.color = els.backgroundColor.value;
+  bindColorHexPair(els.backgroundColor, els.backgroundColorHex, (value) => {
+    config.background.color = value;
     renderBackground();
     saveConfig();
   });
 
   bindRangePair(els.gradientDegree, els.gradientDegreeValue, (value, realtime) => {
     config.background.gradientDegree = Number(value);
+    updateGradientPreview();
     renderBackground();
     if (!realtime) {
       saveConfig();
@@ -1541,10 +1631,14 @@ function wireEvents() {
   });
 
   els.gradientColors.addEventListener("change", () => {
-    const parsed = els.gradientColors.value.split(",").map((x) => x.trim()).filter(Boolean);
-    config.background.gradientColors = parsed.length >= 2 ? parsed : ["#365b9f", "#0f1b2f"];
+    config.background.gradientColors = parseGradientStops(els.gradientColors.value, ["#365b9f", "#0f1b2f"]);
+    updateGradientPreview();
     renderBackground();
     saveConfig();
+  });
+
+  els.gradientColors.addEventListener("input", () => {
+    updateGradientPreview(els.gradientColors.value);
   });
 
   els.backgroundImageUpload.addEventListener("change", async () => {

@@ -531,6 +531,7 @@ select {
   padding: 0.42rem 0.52rem;
   background: rgba(255, 255, 255, 0.08);
   color: var(--surface-text);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
 }
 
 select option {
@@ -539,8 +540,31 @@ select option {
 }
 
 input[type="color"] {
+  width: 52px;
   min-height: 34px;
   padding: 2px;
+}
+
+.colorWithHex {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: center;
+  width: 100%;
+}
+
+.colorWithHex input[type="text"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.gradientPreview {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--surface-border);
+  border-radius: 9px;
+  background: linear-gradient(135deg, #365b9f, #0f1b2f);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .dataActions {
@@ -639,8 +663,14 @@ input:focus-visible,
 select:focus-visible,
 button:focus-visible,
 .shortcutTile:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: none;
+  border-color: color-mix(in srgb, var(--focus) 28%, var(--surface-border) 72%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--focus) 22%, transparent 78%);
+}
+
+#searchInput:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 @media (max-width: 860px) {
@@ -676,6 +706,10 @@ button:focus-visible,
 
 @media (max-width: 420px) {
   .rangeRow {
+    grid-template-columns: 1fr;
+  }
+
+  .colorWithHex {
     grid-template-columns: 1fr;
   }
 }
