@@ -770,7 +770,7 @@ function renderBackground() {
     els.backgroundLayer.style.backgroundImage = bg.imageData ? `url('${escapeSingleQuote(bg.imageData)}')` : "none";
     els.backgroundLayer.style.backgroundSize = `${Math.max(scale, 1)}%`;
     els.backgroundLayer.style.backgroundPosition = `${50 + Number(bg.posX || 0)}% ${50 + Number(bg.posY || 0)}%`;
-    els.backgroundLayer.style.backgroundRepeat = scale < 100 ? "repeat" : "no-repeat";
+    els.backgroundLayer.style.backgroundRepeat = "repeat";
     els.backgroundLayer.style.filter = "none";
     els.backgroundLayer.style.transform = "none";
     renderUnsplashAttribution(null);
@@ -786,7 +786,7 @@ function renderBackground() {
     els.backgroundLayer.style.backgroundImage = item ? `url('${escapeSingleQuote(item.data)}')` : "none";
     els.backgroundLayer.style.backgroundSize = `${Math.max(Number(itemScale) || 100, 1)}%`;
     els.backgroundLayer.style.backgroundPosition = `${50 + Number(itemPosX)}% ${50 + Number(itemPosY)}%`;
-    els.backgroundLayer.style.backgroundRepeat = (Number(itemScale) || 100) < 100 ? "repeat" : "no-repeat";
+    els.backgroundLayer.style.backgroundRepeat = "repeat";
     els.backgroundLayer.style.filter = "none";
     els.backgroundLayer.style.transform = "none";
     renderUnsplashAttribution(null);
@@ -1755,7 +1755,7 @@ function wireEvents() {
     }
   });
   bindRangePair(els.backgroundScale, els.backgroundScaleValue, (value, realtime) => {
-    config.background.scale = clamp(value, 1, 1000);
+    config.background.scale = Number(value);
     if (config.background.type === "image") {
       renderBackground();
     }
@@ -1885,7 +1885,7 @@ function wireEvents() {
     if (!item) {
       return;
     }
-    item.scale = clamp(value, 1, 1000);
+    item.scale = Number(value);
     if (config.background.type === "playlist") {
       renderBackground();
     }
