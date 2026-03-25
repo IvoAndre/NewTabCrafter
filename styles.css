@@ -216,6 +216,7 @@ select {
 .mainShortcutsSection {
   display: flex;
   justify-content: center;
+  transform: translateY(var(--search-offset-y));
 }
 
 .shortcutsGrid,
@@ -345,7 +346,7 @@ select {
   right: 0;
   top: 0;
   width: 420px;
-  min-width: min(380px, 100vw);
+  min-width: min(300px, 100vw);
   max-width: min(760px, 98vw);
   height: 100vh;
   border-left: 1px solid var(--surface-border);
@@ -454,7 +455,13 @@ select {
 .row {
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   margin: 0.4rem 0;
+}
+
+.row > span {
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .column {
@@ -514,6 +521,7 @@ input[type="color"] {
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
+  margin-top: 0.55rem;
 }
 
 .dataActions button,
@@ -534,7 +542,7 @@ input[type="color"] {
 
 .rangeRow {
   display: grid;
-  grid-template-columns: 1fr 84px;
+  grid-template-columns: minmax(0, 1fr) 72px;
   gap: 0.45rem;
   align-items: center;
 }
@@ -620,6 +628,15 @@ button:focus-visible,
     min-width: 100vw;
   }
 
+  .settingsBody {
+    padding: 0.6rem;
+    gap: 0.68rem;
+  }
+
+  .settingsBody section {
+    padding: 0.56rem;
+  }
+
   #mainShortcutsGrid {
     grid-template-columns: repeat(auto-fit, minmax(var(--main-shortcut-size), var(--main-shortcut-size)));
   }
@@ -628,6 +645,12 @@ button:focus-visible,
     left: 10px;
     bottom: 10px;
     max-width: calc(100vw - 20px);
+  }
+}
+
+@media (max-width: 420px) {
+  .rangeRow {
+    grid-template-columns: 1fr;
   }
 }
 

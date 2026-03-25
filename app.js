@@ -100,6 +100,7 @@ const I18N = {
     settingsButtonStyle: "Style",
     uploadProfile: "Upload profile",
     customFavicon: "Favicon",
+    tabName: "Tab name",
     data: "Data",
     exportSettings: "Export",
     importSettings: "Import",
@@ -181,6 +182,7 @@ const I18N = {
     settingsButtonStyle: "Estilo",
     uploadProfile: "Carregar perfil",
     customFavicon: "Favicon",
+    tabName: "Nome do separador",
     data: "Dados",
     exportSettings: "Exportar",
     importSettings: "Importar",
@@ -194,6 +196,7 @@ const I18N = {
 
 const defaultConfig = {
   language: "en-US",
+  tabTitle: "New Tab",
   customFaviconData: "",
   features: {
     search: true,
@@ -441,6 +444,7 @@ const els = {
   resetSettings: document.getElementById("resetSettings"),
   importSettings: document.getElementById("importSettings"),
   faviconUpload: document.getElementById("faviconUpload"),
+  tabName: document.getElementById("tabName"),
 
   shortcutModalBackdrop: document.getElementById("shortcutModalBackdrop"),
   modalTitle: document.getElementById("modalTitle"),
@@ -475,6 +479,7 @@ function boot() {
   sanitizeConfig();
   rotatePlaylistSelectionOnBoot();
   enforceAddingModeForEmptyShortcuts();
+  applyTabTitle();
   applyLanguage();
   renderCornerPickers();
   applyFont();
@@ -528,6 +533,7 @@ function rotatePlaylistSelectionOnBoot() {
 
 function sanitizeConfig() {
   config = deepMerge(structuredClone(defaultConfig), config);
+  config.tabTitle = String(config.tabTitle || "").trim() || defaultConfig.tabTitle;
   if (!Array.isArray(config.shortcuts.main)) {
     config.shortcuts.main = [];
   }
@@ -616,6 +622,10 @@ function applyLanguage() {
     const key = el.getAttribute("data-i18n");
     el.textContent = t(key);
   });
+}
+
+function applyTabTitle() {
+  document.title = String(config.tabTitle || "").trim() || defaultConfig.tabTitle;
 }
 
 function applyFont() {
@@ -1014,6 +1024,9 @@ function getSelectedPlaylistItem() {
 
 function syncForm() {
   els.languageSelect.value = config.language;
+  if (els.tabName) {
+    els.tabName.value = String(config.tabTitle || "");
+  }
   els.addingMode.checked = config.layout.addingMode;
   els.enableSearch.checked = config.features.search;
   els.enableApps.checked = config.features.appsMenu;
@@ -1337,8 +1350,8 @@ function placeCorner(el, corner, offset) {
 }
 
 function applySettingsPaneWidth() {
-  const maxAllowed = Math.min(760, window.innerWidth - 16);
-  config.settingsPane.width = clamp(config.settingsPane.width, 340, maxAllowed);
+  const maxAllowed = Math.min(760, window.innerWidth - 8);
+  config.settingsPane.width = clamp(config.settingsPane.width, 280, maxAllowed);
   els.settingsPane.style.width = `${config.settingsPane.width}px`;
 }
 
@@ -1401,10 +1414,19 @@ function wireEvents() {
   els.languageSelect.addEventListener("change", () => {
     config.language = els.languageSelect.value;
     applyLanguage();
+    applyTabTitle();
     renderSearch();
     renderAllShortcuts();
     saveConfig();
   });
+
+  if (els.tabName) {
+    els.tabName.addEventListener("change", () => {
+      config.tabTitle = String(els.tabName.value || "").trim() || defaultConfig.tabTitle;
+      applyTabTitle();
+      saveConfig();
+    });
+  }
 
   els.addingMode.addEventListener("change", () => {
     config.layout.addingMode = els.addingMode.checked;
@@ -1931,7 +1953,7 @@ function wireResizeHandle() {
       return;
     }
     const width = window.innerWidth - event.clientX;
-    config.settingsPane.width = clamp(width, 340, Math.min(760, window.innerWidth - 16));
+    config.settingsPane.width = clamp(width, 280, Math.min(760, window.innerWidth - 8));
     applySettingsPaneWidth();
   });
   window.addEventListener("mouseup", () => {
