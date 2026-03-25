@@ -320,6 +320,7 @@ const modalState = {
 let config = loadConfig();
 let dragState = { listName: "", id: "" };
 let didWire = false;
+let didAutoFocusSearch = false;
 let didWarnStorageQuota = false;
 let randomFetchPromise = null;
 let lastUnsplashDownloadId = "";
@@ -522,15 +523,26 @@ function boot() {
 }
 
 function focusSearchOnBoot() {
-  if (!config.features.search || !els.searchInput || els.searchInput.disabled) {
+  if (!config.features.search || !els.searchInput || els.searchInput.disabled || didAutoFocusSearch) {
     return;
   }
-  requestAnimationFrame(() => {
-    if (document.activeElement === document.body || document.activeElement === null) {
-      els.searchInput.focus({ preventScroll: true });
-      els.searchInput.select();
+
+  const tryFocus = () => {
+    const active = document.activeElement;
+    const canStealFocus = active === null || active === document.body || active === document.documentElement;
+    if (!canStealFocus) {
+      return;
     }
-  });
+    els.searchInput.focus({ preventScroll: true });
+    if (document.activeElement === els.searchInput) {
+      els.searchInput.select();
+      didAutoFocusSearch = true;
+    }
+  };
+
+  requestAnimationFrame(tryFocus);
+  setTimeout(tryFocus, 80);
+  setTimeout(tryFocus, 220);
 }
 
 function rotatePlaylistSelectionOnBoot() {
@@ -2106,6 +2118,16 @@ function wireEvents() {
       }
     });
   }
+
+  window.addEventListener("pageshow", () => {
+    focusSearchOnBoot();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      focusSearchOnBoot();
+    }
+  });
 }
 
 function syncPlaylistControls() {
