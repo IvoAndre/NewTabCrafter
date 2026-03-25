@@ -300,6 +300,9 @@ function shortcutFactory(name, url) {
     customIconData: "",
     iconScale: 100,
     openIn: "current",
+    faClass: "",
+    faColor1: "#74b1ff",
+    faColor2: "",
     badgeText: "",
     badgeColor1: "#4f7cff",
     badgeColor2: ""
@@ -465,6 +468,12 @@ const els = {
   modalShortcutIconScaleWrap: document.getElementById("modalShortcutIconScaleWrap"),
   modalShortcutIconScale: document.getElementById("modalShortcutIconScale"),
   modalShortcutIconScaleValue: document.getElementById("modalShortcutIconScaleValue"),
+  modalShortcutFaClassWrap: document.getElementById("modalShortcutFaClassWrap"),
+  modalShortcutFaColor1Wrap: document.getElementById("modalShortcutFaColor1Wrap"),
+  modalShortcutFaColor2Wrap: document.getElementById("modalShortcutFaColor2Wrap"),
+  modalShortcutFaClass: document.getElementById("modalShortcutFaClass"),
+  modalShortcutFaColor1: document.getElementById("modalShortcutFaColor1"),
+  modalShortcutFaColor2: document.getElementById("modalShortcutFaColor2"),
   modalShortcutBadgeTextWrap: document.getElementById("modalShortcutBadgeTextWrap"),
   modalShortcutBadgeColor1Wrap: document.getElementById("modalShortcutBadgeColor1Wrap"),
   modalShortcutBadgeColor2Wrap: document.getElementById("modalShortcutBadgeColor2Wrap"),
@@ -566,6 +575,20 @@ function sanitizeConfig() {
   config.layout.mainColumns = clamp(config.layout.mainColumns, 1, 12);
   config.layout.shortcutTileSize = clamp(config.layout.shortcutTileSize, 72, 180);
   config.layout.mainRows = clamp(config.layout.mainRows, 1, 10);
+  config.shortcuts.main = config.shortcuts.main.map((shortcut) => sanitizeShortcut(shortcut));
+  config.shortcuts.apps = config.shortcuts.apps.map((shortcut) => sanitizeShortcut(shortcut));
+}
+
+function sanitizeShortcut(shortcut) {
+  const merged = deepMerge(shortcutFactory("", ""), shortcut || {});
+  const allowedModes = new Set(["favicon", "custom", "badge", "fontawesome", "none"]);
+  if (!allowedModes.has(merged.iconMode)) {
+    merged.iconMode = "favicon";
+  }
+  merged.faClass = String(merged.faClass || "").trim();
+  merged.faColor1 = normalizeHexColor(merged.faColor1, "#74b1ff");
+  merged.faColor2 = String(merged.faColor2 || "").trim();
+  return merged;
 }
 
 function enforceAddingModeForEmptyShortcuts() {
@@ -667,6 +690,7 @@ function resolveThemePalette() {
 
 function applyThemeAndColors() {
   const palette = resolveThemePalette();
+  const isLightSurface = isHexColorLight(palette.component);
   const alpha = clamp(config.theme.componentAlpha, 0, 100) / 100;
   const strongAlpha = Math.min(alpha + 0.22, 0.95);
   setCssVar("--surface", hexToRgba(palette.component, alpha));
@@ -674,6 +698,12 @@ function applyThemeAndColors() {
   setCssVar("--surface-border", hexToRgba(palette.border, 0.65));
   setCssVar("--surface-text", palette.text);
   setCssVar("--surface-muted", hexToRgba(palette.text, 0.64));
+  setCssVar("--select-option-bg", isLightSurface ? "#f3f7ff" : "#101a2b");
+  setCssVar("--select-option-text", isLightSurface ? "#1a2a44" : "#eef3ff");
+  setCssVar("--select-option-selected-bg", isLightSurface ? "#2a63cd" : "#2f6ee5");
+  setCssVar("--select-option-selected-text", "#ffffff");
+  setCssVar("--select-option-hover-bg", isLightSurface ? "#1f4ca6" : "#1f4ca6");
+  setCssVar("--select-chevron", isLightSurface ? "#294164" : "#d9e4ff");
 }
 
 function renderBackground() {
@@ -871,6 +901,24 @@ function buildShortcutTile(shortcut, listName, showTextSetting) {
     const c2 = shortcut.badgeColor2 || "";
     badge.style.background = c2 ? `linear-gradient(135deg, ${c1}, ${c2})` : c1;
     tile.appendChild(badge);
+  } else if (shortcut.iconMode === "fontawesome") {
+    const faIcon = document.createElement("i");
+    const safeClass = buildFaClassList(shortcut.faClass);
+    faIcon.className = `faShortcutIcon ${safeClass}`;
+    const c1 = normalizeHexColor(shortcut.faColor1, "#74b1ff");
+    const c2Raw = String(shortcut.faColor2 || "").trim();
+    if (c2Raw) {
+      const c2 = normalizeHexColor(c2Raw, c1);
+      faIcon.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+      faIcon.style.webkitBackgroundClip = "text";
+      faIcon.style.backgroundClip = "text";
+      faIcon.style.color = "transparent";
+      faIcon.style.webkitTextFillColor = "transparent";
+    } else {
+      faIcon.style.color = c1;
+    }
+    faIcon.style.transform = `scale(${(shortcut.iconScale ?? 100) / 100})`;
+    tile.appendChild(faIcon);
   } else {
     const icon = document.createElement("img");
     if (!iconSrc) {
@@ -885,7 +933,8 @@ function buildShortcutTile(shortcut, listName, showTextSetting) {
   const title = document.createElement("div");
   title.className = "title";
   title.textContent = shortcut.name;
-  if (!showTextSetting && iconSrc) {
+  const hasVisualIcon = shortcut.iconMode === "badge" || shortcut.iconMode === "fontawesome" || Boolean(iconSrc);
+  if (!showTextSetting && hasVisualIcon) {
     title.classList.add("hidden");
   }
   tile.appendChild(title);
@@ -954,7 +1003,7 @@ function buildAddTile(listName) {
 }
 
 function resolveShortcutIcon(shortcut) {
-  if (shortcut.iconMode === "none") {
+  if (shortcut.iconMode === "none" || shortcut.iconMode === "badge" || shortcut.iconMode === "fontawesome") {
     return "";
   }
   if (shortcut.iconMode === "custom") {
@@ -1994,15 +2043,7 @@ function wireEvents() {
   });
 
   els.modalShortcutIconMode.addEventListener("change", () => {
-    const custom = els.modalShortcutIconMode.value === "custom";
-    const favicon = els.modalShortcutIconMode.value === "favicon";
-    const badge = els.modalShortcutIconMode.value === "badge";
-    els.modalShortcutIconUploadWrap.classList.toggle("hidden", !custom);
-    els.modalShortcutFaviconUrlWrap.classList.toggle("hidden", !favicon);
-    els.modalShortcutIconScaleWrap.classList.toggle("hidden", !custom);
-    els.modalShortcutBadgeTextWrap.classList.toggle("hidden", !badge);
-    els.modalShortcutBadgeColor1Wrap.classList.toggle("hidden", !badge);
-    els.modalShortcutBadgeColor2Wrap.classList.toggle("hidden", !badge);
+    updateModalIconModeVisibility();
   });
 
   bindRangePair(els.modalShortcutIconScale, els.modalShortcutIconScaleValue, () => {});
@@ -2182,6 +2223,9 @@ function openShortcutModal(mode, listName, shortcutId) {
     els.modalShortcutFaviconUrl.value = shortcut.faviconUrl || "";
     setPairValue(els.modalShortcutIconScale, els.modalShortcutIconScaleValue, shortcut.iconScale ?? 100);
     els.modalShortcutOpenIn.value = shortcut.openIn || "current";
+    els.modalShortcutFaClass.value = shortcut.faClass || "";
+    els.modalShortcutFaColor1.value = shortcut.faColor1 || "#74b1ff";
+    els.modalShortcutFaColor2.value = shortcut.faColor2 || "";
     els.modalShortcutBadgeText.value = shortcut.badgeText || "";
     els.modalShortcutBadgeColor1.value = shortcut.badgeColor1 || "#4f7cff";
     els.modalShortcutBadgeColor2.value = shortcut.badgeColor2 || "";
@@ -2193,22 +2237,34 @@ function openShortcutModal(mode, listName, shortcutId) {
     els.modalShortcutFaviconUrl.value = "";
     setPairValue(els.modalShortcutIconScale, els.modalShortcutIconScaleValue, 100);
     els.modalShortcutOpenIn.value = "current";
+    els.modalShortcutFaClass.value = "";
+    els.modalShortcutFaColor1.value = "#74b1ff";
+    els.modalShortcutFaColor2.value = "";
     els.modalShortcutBadgeText.value = "";
     els.modalShortcutBadgeColor1.value = "#4f7cff";
     els.modalShortcutBadgeColor2.value = "";
   }
 
-  const custom = els.modalShortcutIconMode.value === "custom";
-  const favicon = els.modalShortcutIconMode.value === "favicon";
-  const badge = els.modalShortcutIconMode.value === "badge";
+  updateModalIconModeVisibility();
+  els.shortcutModalBackdrop.classList.remove("hidden");
+  els.shortcutModalBackdrop.setAttribute("aria-hidden", "false");
+}
+
+function updateModalIconModeVisibility() {
+  const mode = els.modalShortcutIconMode.value;
+  const custom = mode === "custom";
+  const favicon = mode === "favicon";
+  const badge = mode === "badge";
+  const fontAwesome = mode === "fontawesome";
   els.modalShortcutIconUploadWrap.classList.toggle("hidden", !custom);
   els.modalShortcutFaviconUrlWrap.classList.toggle("hidden", !favicon);
-  els.modalShortcutIconScaleWrap.classList.toggle("hidden", !custom);
+  els.modalShortcutIconScaleWrap.classList.toggle("hidden", !(custom || fontAwesome));
+  els.modalShortcutFaClassWrap.classList.toggle("hidden", !fontAwesome);
+  els.modalShortcutFaColor1Wrap.classList.toggle("hidden", !fontAwesome);
+  els.modalShortcutFaColor2Wrap.classList.toggle("hidden", !fontAwesome);
   els.modalShortcutBadgeTextWrap.classList.toggle("hidden", !badge);
   els.modalShortcutBadgeColor1Wrap.classList.toggle("hidden", !badge);
   els.modalShortcutBadgeColor2Wrap.classList.toggle("hidden", !badge);
-  els.shortcutModalBackdrop.classList.remove("hidden");
-  els.shortcutModalBackdrop.setAttribute("aria-hidden", "false");
 }
 
 function closeShortcutModal() {
@@ -2223,6 +2279,9 @@ function saveShortcutFromModal() {
   const faviconUrl = String(els.modalShortcutFaviconUrl.value || "").trim();
   const iconScale = clamp(els.modalShortcutIconScale.value, 80, 220);
   const openIn = els.modalShortcutOpenIn.value;
+  const faClass = String(els.modalShortcutFaClass.value || "").trim();
+  const faColor1 = normalizeHexColor(els.modalShortcutFaColor1.value, "#74b1ff");
+  const faColor2 = String(els.modalShortcutFaColor2.value || "").trim();
   const badgeText = String(els.modalShortcutBadgeText.value || "").trim().slice(0, 2);
   const badgeColor1 = String(els.modalShortcutBadgeColor1.value || "").trim() || "#4f7cff";
   const badgeColor2 = String(els.modalShortcutBadgeColor2.value || "").trim();
@@ -2245,6 +2304,9 @@ function saveShortcutFromModal() {
       customIconData: iconMode === "custom" ? modalState.pendingIconData : "",
       iconScale,
       openIn,
+      faClass,
+      faColor1,
+      faColor2,
       badgeText,
       badgeColor1,
       badgeColor2
@@ -2261,6 +2323,9 @@ function saveShortcutFromModal() {
     shortcut.customIconData = iconMode === "custom" ? (modalState.pendingIconData || shortcut.customIconData) : "";
     shortcut.iconScale = iconScale;
     shortcut.openIn = openIn;
+    shortcut.faClass = faClass;
+    shortcut.faColor1 = faColor1;
+    shortcut.faColor2 = faColor2;
     shortcut.badgeText = badgeText;
     shortcut.badgeColor1 = badgeColor1;
     shortcut.badgeColor2 = badgeColor2;
@@ -2295,6 +2360,20 @@ function getFavicon(url, overrideUrl = "") {
 
 function fallbackIcon() {
   return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect width='100%25' height='100%25' rx='8' fill='%239aa3c0'/%3E%3C/svg%3E";
+}
+
+function buildFaClassList(faClass) {
+  const raw = String(faClass || "").trim();
+  const tokens = raw.split(/\s+/).filter((token) => /^fa[a-z0-9-]*$/i.test(token));
+  const hasStyle = tokens.some((token) => token === "fa-brands" || token === "fa-solid" || token === "fa-regular" || token === "fa-light" || token === "fa-duotone");
+  const hasIcon = tokens.some((token) => /^fa-[a-z0-9-]+$/i.test(token) && token !== "fa-brands" && token !== "fa-solid" && token !== "fa-regular" && token !== "fa-light" && token !== "fa-duotone");
+  if (!hasStyle) {
+    tokens.unshift("fa-solid");
+  }
+  if (!hasIcon) {
+    tokens.push("fa-link");
+  }
+  return Array.from(new Set(tokens)).join(" ");
 }
 
 function normalizeUrl(value) {
@@ -2348,6 +2427,18 @@ function hexToRgba(hex, alpha) {
   const g = parseInt(clean.slice(2, 4), 16);
   const b = parseInt(clean.slice(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function isHexColorLight(hex) {
+  const clean = String(hex || "").replace("#", "");
+  if (clean.length !== 6) {
+    return false;
+  }
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness >= 150;
 }
 
 function escapeSingleQuote(value) {
