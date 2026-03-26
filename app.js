@@ -270,7 +270,6 @@ const defaultConfig = {
     appsColumns: 4,
     mainColumns: 10,
     shortcutTileSize: 112,
-    mainRows: 2,
     addingMode: false
   },
   shortcutStyle: {
@@ -446,7 +445,6 @@ const els = {
   appsColumns: document.getElementById("appsColumns"),
   mainColumns: document.getElementById("mainColumns"),
   shortcutTileSize: document.getElementById("shortcutTileSize"),
-  mainRows: document.getElementById("mainRows"),
 
   appsShowText: document.getElementById("appsShowText"),
   mainShowText: document.getElementById("mainShowText"),
@@ -615,7 +613,6 @@ function sanitizeConfig() {
   config.layout.appsColumns = clamp(config.layout.appsColumns, 2, 8);
   config.layout.mainColumns = clamp(config.layout.mainColumns, 1, 12);
   config.layout.shortcutTileSize = clamp(config.layout.shortcutTileSize, 72, 180);
-  config.layout.mainRows = clamp(config.layout.mainRows, 1, 10);
   config.shortcuts.main = config.shortcuts.main.map((shortcut) => sanitizeShortcut(shortcut));
   config.shortcuts.apps = config.shortcuts.apps.map((shortcut) => sanitizeShortcut(shortcut));
 }
@@ -1152,9 +1149,8 @@ function renderFeatureVisibility() {
 
 function renderMainShortcuts() {
   els.mainShortcutsGrid.innerHTML = "";
-  const max = config.layout.mainRows * config.layout.mainColumns;
-  const visibleShortcuts = config.shortcuts.main.slice(0, max);
-  const showAddTile = config.layout.addingMode && config.shortcuts.main.length < max;
+  const visibleShortcuts = config.shortcuts.main;
+  const showAddTile = config.layout.addingMode;
   const visibleTilesCount = visibleShortcuts.length + (showAddTile ? 1 : 0);
   const effectiveColumns = Math.max(1, Math.min(config.layout.mainColumns, visibleTilesCount || config.layout.mainColumns));
   els.mainShortcutsGrid.style.setProperty("--main-shortcut-columns", String(effectiveColumns));
@@ -1451,7 +1447,6 @@ function syncForm() {
   els.appsColumns.value = String(config.layout.appsColumns);
   els.mainColumns.value = String(config.layout.mainColumns);
   els.shortcutTileSize.value = String(config.layout.shortcutTileSize);
-  els.mainRows.value = String(config.layout.mainRows);
 
   els.appsShowText.checked = config.shortcutStyle.appsShowText;
   els.mainShowText.checked = config.shortcutStyle.mainShowText;
@@ -2328,11 +2323,6 @@ function wireEvents() {
     renderAllShortcuts();
     saveConfig();
   });
-  els.mainRows.addEventListener("change", () => {
-    config.layout.mainRows = clamp(els.mainRows.value, 1, 10);
-    renderMainShortcuts();
-    saveConfig();
-  });
 
   els.appsShowText.addEventListener("change", () => {
     config.shortcutStyle.appsShowText = els.appsShowText.checked;
@@ -2658,10 +2648,6 @@ function saveShortcutFromModal() {
   }
 
   if (modalState.mode === "add") {
-    if (modalState.listName === "main" && config.shortcuts.main.length >= config.layout.mainRows * config.layout.mainColumns) {
-      closeShortcutModal();
-      return;
-    }
     config.shortcuts[modalState.listName].push({
       id: crypto.randomUUID(),
       name,
