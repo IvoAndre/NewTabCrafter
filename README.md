@@ -21,22 +21,6 @@ Uma nova aba leve, executada no browser, sem build tools e com persistencia loca
 - App estatico: `index.html`, `styles.css`, `app.js`
 - Armazenamento: `localStorage` do browser (`newtab.config`)
 
-## Executar localmente
-
-```powershell
-cd c:\Users\Ivo\source\repos\newtab-page
-python -m http.server 8080
-```
-
-Abrir `http://localhost:8080`.
-
-## Publicar (GitHub Pages)
-
-1. Fazer push do projeto para o repositorio GitHub.
-2. No GitHub, abrir Settings -> Pages.
-3. Em Source, escolher Deploy from a branch.
-4. Selecionar `main` e pasta `/ (root)`.
-5. Guardar e aguardar o URL do Pages.
 
 ## Notas
 
