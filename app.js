@@ -1174,10 +1174,15 @@ function renderMainShortcuts() {
   const visibleShortcuts = config.shortcuts.main;
   const showAddTile = config.layout.addingMode;
   const visibleTilesCount = visibleShortcuts.length + (showAddTile ? 1 : 0);
-  const effectiveColumns = Math.max(1, Math.min(config.layout.mainColumns, visibleTilesCount || config.layout.mainColumns));
+  const maxMainWidth = Math.max(220, Math.min(1320, window.innerWidth - 24));
+  const autoFitColumns = getAutoFitColumns(
+    config.layout.mainColumns,
+    config.layout.shortcutTileSize,
+    maxMainWidth
+  );
+  const effectiveColumns = Math.max(1, Math.min(config.layout.mainColumns, autoFitColumns, visibleTilesCount || config.layout.mainColumns));
   els.mainShortcutsGrid.style.setProperty("--main-shortcut-columns", String(effectiveColumns));
   els.mainShortcutsGrid.style.setProperty("--main-shortcut-size", `${config.layout.shortcutTileSize}px`);
-  els.appsGrid.style.setProperty("--main-shortcut-size", `${config.layout.shortcutTileSize}px`);
   for (const shortcut of visibleShortcuts) {
     els.mainShortcutsGrid.appendChild(buildShortcutTile(shortcut, "main", config.shortcutStyle.mainShowText));
   }
@@ -1188,7 +1193,11 @@ function renderMainShortcuts() {
 
 function renderAppsShortcuts() {
   els.appsGrid.innerHTML = "";
-  els.appsGrid.style.setProperty("--apps-columns", String(config.layout.appsColumns));
+  const visibleTilesCount = config.shortcuts.apps.length + (config.layout.addingMode ? 1 : 0);
+  const maxAppsWidth = Math.max(220, window.innerWidth - 24 - 32);
+  const autoFitColumns = getAutoFitColumns(config.layout.appsColumns, config.layout.shortcutTileSize, maxAppsWidth);
+  const effectiveColumns = Math.max(1, Math.min(config.layout.appsColumns, autoFitColumns, visibleTilesCount || config.layout.appsColumns));
+  els.appsGrid.style.setProperty("--apps-columns", String(effectiveColumns));
   els.appsGrid.style.setProperty("--main-shortcut-size", `${config.layout.shortcutTileSize}px`);
   for (const shortcut of config.shortcuts.apps) {
     els.appsGrid.appendChild(buildShortcutTile(shortcut, "apps", config.shortcutStyle.appsShowText));
@@ -1196,6 +1205,16 @@ function renderAppsShortcuts() {
   if (config.layout.addingMode) {
     els.appsGrid.appendChild(buildAddTile("apps"));
   }
+}
+
+function getAutoFitColumns(configuredColumns, tileSize, availableWidth) {
+  const configured = Math.max(1, Number(configuredColumns) || 1);
+  const size = Math.max(1, Number(tileSize) || 1);
+  const width = Math.max(120, Number(availableWidth) || 120);
+  const rootFontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const gap = 0.86 * rootFontSize;
+  const fit = Math.floor((width + gap) / (size + gap));
+  return clamp(fit, 1, configured);
 }
 
 function renderAllShortcuts() {
@@ -2459,6 +2478,7 @@ function syncPlaylistControls() {
 
 function wireResizeHandle() {
   let resizing = false;
+  let resizeFrame = 0;
   els.settingsResizeHandle.addEventListener("mousedown", (event) => {
     resizing = true;
     event.preventDefault();
@@ -2478,7 +2498,16 @@ function wireResizeHandle() {
     resizing = false;
     saveConfig();
   });
-  window.addEventListener("resize", applySettingsPaneWidth);
+  window.addEventListener("resize", () => {
+    applySettingsPaneWidth();
+    if (resizeFrame) {
+      cancelAnimationFrame(resizeFrame);
+    }
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = 0;
+      renderAllShortcuts();
+    });
+  });
 }
 
 function wireBackgroundDrag() {

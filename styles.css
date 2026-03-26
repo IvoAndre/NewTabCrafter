@@ -290,7 +290,8 @@ select {
   width: max-content;
   max-height: calc(100vh - 116px);
   max-width: calc(100vw - 24px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.8rem;
   border: 1px solid var(--surface-border);
   border-radius: 14px;
@@ -780,10 +781,6 @@ button:focus-visible,
     padding: 0.56rem;
   }
 
-  #mainShortcutsGrid {
-    grid-template-columns: repeat(auto-fit, minmax(var(--main-shortcut-size), var(--main-shortcut-size)));
-  }
-
   .unsplashAttribution {
     left: 10px;
     bottom: 10px;
@@ -804,6 +801,5 @@ button:focus-visible,
 @media (max-width: 1100px) {
   #mainShortcutsGrid {
     max-width: 100%;
-    grid-template-columns: repeat(auto-fit, minmax(min(var(--main-shortcut-size), 100%), var(--main-shortcut-size)));
   }
 }
