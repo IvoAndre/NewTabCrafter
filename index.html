@@ -29,13 +29,16 @@
     </section>
 
     <section id="searchSection" class="searchSection">
-      <form id="searchForm" class="searchBar" autocomplete="off">
-        <img id="searchIcon" class="searchIcon" alt="Search engine icon" />
-        <input id="searchInput" type="text" aria-label="Search" />
-        <button class="searchSubmit" type="submit" aria-label="Search">
-          <span class="material-symbols-outlined">search</span>
-        </button>
-      </form>
+      <div class="searchWrap">
+        <form id="searchForm" class="searchBar" autocomplete="off">
+          <img id="searchIcon" class="searchIcon" alt="Search engine icon" />
+          <input id="searchInput" type="text" aria-label="Search" autocomplete="off" spellcheck="false" />
+          <button class="searchSubmit" type="submit" aria-label="Search">
+            <span class="material-symbols-outlined">search</span>
+          </button>
+        </form>
+        <div id="searchSuggestions" class="searchSuggestions hidden" role="listbox" aria-hidden="true"></div>
+      </div>
     </section>
 
     <section id="mainShortcutsSection" class="mainShortcutsSection">

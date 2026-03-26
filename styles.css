@@ -163,10 +163,18 @@ select {
   display: flex;
   justify-content: center;
   transform: translateY(var(--search-offset-y));
+  position: relative;
+  z-index: 40;
+}
+
+.searchWrap {
+  width: min(840px, 100%);
+  position: relative;
+  z-index: 40;
 }
 
 .searchBar {
-  width: min(840px, 100%);
+  width: 100%;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -219,10 +227,49 @@ select {
   outline: none;
 }
 
+.searchSuggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: 45;
+  backdrop-filter: blur(10px);
+}
+
+.searchSuggestionItem {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--surface-border) 72%, transparent 28%);
+  background: transparent;
+  color: var(--surface-text);
+  text-align: left;
+  padding: 0.56rem 0.86rem;
+  cursor: pointer;
+  font-family: var(--font-search);
+  font-weight: var(--font-search-weight);
+  font-size: calc(var(--font-search-size) * 0.94);
+}
+
+.searchSuggestionItem:last-child {
+  border-bottom: 0;
+}
+
+.searchSuggestionItem:hover,
+.searchSuggestionItem.active {
+  background: color-mix(in srgb, var(--surface) 56%, #ffffff 10%);
+}
+
 .mainShortcutsSection {
   display: flex;
   justify-content: center;
   transform: translateY(var(--search-offset-y));
+  position: relative;
+  z-index: 10;
 }
 
 .shortcutsGrid,
