@@ -1,8 +1,9 @@
 # NewTabCrafter
 
+English version: [README.en.md](https://github.com/IvoAndre/NewTabCrafter/blob/main/readme.en.md)
+
 Uma nova aba leve, executada no browser, sem build tools e com persistencia local no cliente.
 
-Para a documentacao em ingles, consulte `readme.en.md`.
 
 ## Destaques
 
