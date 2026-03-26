@@ -1153,13 +1153,17 @@ function renderFeatureVisibility() {
 function renderMainShortcuts() {
   els.mainShortcutsGrid.innerHTML = "";
   const max = config.layout.mainRows * config.layout.mainColumns;
-  els.mainShortcutsGrid.style.setProperty("--main-shortcut-columns", String(config.layout.mainColumns));
+  const visibleShortcuts = config.shortcuts.main.slice(0, max);
+  const showAddTile = config.layout.addingMode && config.shortcuts.main.length < max;
+  const visibleTilesCount = visibleShortcuts.length + (showAddTile ? 1 : 0);
+  const effectiveColumns = Math.max(1, Math.min(config.layout.mainColumns, visibleTilesCount || config.layout.mainColumns));
+  els.mainShortcutsGrid.style.setProperty("--main-shortcut-columns", String(effectiveColumns));
   els.mainShortcutsGrid.style.setProperty("--main-shortcut-size", `${config.layout.shortcutTileSize}px`);
   els.appsGrid.style.setProperty("--main-shortcut-size", `${config.layout.shortcutTileSize}px`);
-  for (const shortcut of config.shortcuts.main.slice(0, max)) {
+  for (const shortcut of visibleShortcuts) {
     els.mainShortcutsGrid.appendChild(buildShortcutTile(shortcut, "main", config.shortcutStyle.mainShowText));
   }
-  if (config.layout.addingMode && config.shortcuts.main.length < max) {
+  if (showAddTile) {
     els.mainShortcutsGrid.appendChild(buildAddTile("main"));
   }
 }
