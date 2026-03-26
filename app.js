@@ -319,6 +319,7 @@ const modalState = {
 let config = loadConfig();
 let dragState = { listName: "", id: "" };
 let didWire = false;
+let didRegisterServiceWorker = false;
 let didAutoFocusSearch = false;
 let didWarnStorageQuota = false;
 let randomFetchPromise = null;
@@ -498,6 +499,7 @@ if (document.readyState === "complete") {
 }
 
 function boot() {
+  registerServiceWorkerOnce();
   sanitizeConfig();
   rotatePlaylistSelectionOnBoot();
   enforceAddingModeForEmptyShortcuts();
@@ -526,6 +528,26 @@ function boot() {
     didWire = true;
   }
   saveConfig();
+}
+
+function registerServiceWorkerOnce() {
+  if (didRegisterServiceWorker) {
+    return;
+  }
+  didRegisterServiceWorker = true;
+
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (!isLocal && window.location.protocol !== "https:") {
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }, { once: true });
 }
 
 function focusSearchOnBoot() {
