@@ -1732,8 +1732,8 @@ async function fetchUnsplashCategory(category) {
     const list = Array.isArray(payload?.results) ? payload.results : [];
     return list.slice(0, 30).map((photo) => {
       const userName = photo?.user?.name || "Unknown";
-      const userLink = `${photo?.user?.links?.html || "https://unsplash.com"}?utm_source=${UNSPLASH_REFERRAL}&utm_medium=referral`;
-      const photoLink = `${photo?.links?.html || "https://unsplash.com"}?utm_source=${UNSPLASH_REFERRAL}&utm_medium=referral`;
+      const userLink = withUnsplashUtm(photo?.user?.links?.html || "https://unsplash.com");
+      const photoLink = withUnsplashUtm(photo?.links?.html || "https://unsplash.com");
       return {
         id: String(photo.id || crypto.randomUUID()),
         imageUrl: `${photo?.urls?.regular || photo?.urls?.full || ""}`,
@@ -1745,6 +1745,17 @@ async function fetchUnsplashCategory(category) {
     }).filter((photo) => Boolean(photo.imageUrl));
   } catch {
     return [];
+  }
+}
+
+function withUnsplashUtm(url) {
+  try {
+    const parsed = new URL(String(url || "https://unsplash.com"));
+    parsed.searchParams.set("utm_source", UNSPLASH_REFERRAL);
+    parsed.searchParams.set("utm_medium", "referral");
+    return parsed.toString();
+  } catch {
+    return String(url || "https://unsplash.com");
   }
 }
 
