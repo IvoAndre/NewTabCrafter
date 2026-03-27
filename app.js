@@ -526,7 +526,7 @@ function boot() {
   positionFloatingButtons();
   applySettingsPaneWidth();
   initCollapsibleSections();
-  ensureRandomStockPhoto();
+  ensureRandomStockPhoto({ forcePick: true });
   els.body.classList.remove("preload");
   focusSearchOnBoot();
   if (!didWire) {
