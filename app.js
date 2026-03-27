@@ -18,7 +18,7 @@ const ENGINE_PRESETS = {
 
 const UNSPLASH_APP_ID = "906064";
 const UNSPLASH_ACCESS_KEY = "DXc4wqPdvqunuCE-7gdQ3DXMavlmCF3jucuwEv86DSo";
-const UNSPLASH_REFERRAL = "newtab-page";
+const UNSPLASH_REFERRAL = "NewTabCrafter";
 const RANDOM_STOCK_TERMS = {
   nature: "nature landscape",
   city: "city skyline night",
