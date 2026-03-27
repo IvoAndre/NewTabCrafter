@@ -1,6 +1,8 @@
-const CACHE_VERSION = "ntc-v1";
+const CACHE_VERSION = "ntc-v2";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-app-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
+const UNSPLASH_IMAGE_CACHE = `${CACHE_VERSION}-unsplash-images`;
+const UNSPLASH_IMAGE_CACHE_MAX_ENTRIES = 80;
 
 const APP_SHELL_ASSETS = [
   "./",
@@ -33,6 +35,11 @@ self.addEventListener("fetch", (event) => {
   }
 
   const url = new URL(event.request.url);
+  if (isUnsplashImageRequest(url, event.request)) {
+    event.respondWith(cacheFirstUnsplashImage(event.request));
+    return;
+  }
+
   if (url.origin !== self.location.origin) {
     return;
   }
@@ -44,6 +51,16 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(staleWhileRevalidate(event.request));
 });
+
+function isUnsplashImageRequest(url, request) {
+  const host = url.hostname.toLowerCase();
+  const isUnsplashHost = host === "images.unsplash.com" || host.endsWith(".images.unsplash.com");
+  if (!isUnsplashHost) {
+    return false;
+  }
+
+  return request.destination === "image" || url.pathname.toLowerCase().includes("/photo-");
+}
 
 async function networkFirst(request) {
   const cache = await caches.open(APP_SHELL_CACHE);
@@ -85,4 +102,36 @@ async function staleWhileRevalidate(request) {
   }
 
   return caches.match("./index.html");
+}
+
+async function cacheFirstUnsplashImage(request) {
+  const cache = await caches.open(UNSPLASH_IMAGE_CACHE);
+  const cached = await cache.match(request, { ignoreSearch: false });
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      await cache.put(request, response.clone());
+      await trimCacheEntries(UNSPLASH_IMAGE_CACHE, UNSPLASH_IMAGE_CACHE_MAX_ENTRIES);
+    }
+    return response;
+  } catch {
+    return cached || Response.error();
+  }
+}
+
+async function trimCacheEntries(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const requests = await cache.keys();
+  const overflow = requests.length - maxEntries;
+  if (overflow <= 0) {
+    return;
+  }
+
+  for (let index = 0; index < overflow; index += 1) {
+    await cache.delete(requests[index]);
+  }
 }

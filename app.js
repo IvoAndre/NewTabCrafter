@@ -19,7 +19,7 @@ const ENGINE_PRESETS = {
 const UNSPLASH_APP_ID = "906064";
 const UNSPLASH_ACCESS_KEY = "DXc4wqPdvqunuCE-7gdQ3DXMavlmCF3jucuwEv86DSo";
 const UNSPLASH_REFERRAL = "NewTabCrafter";
-const UNSPLASH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const UNSPLASH_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const RANDOM_STOCK_TERMS = {
   nature: "nature landscape",
   city: "city skyline night",
@@ -547,8 +547,29 @@ function registerServiceWorkerOnce() {
     return;
   }
 
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  window.addEventListener("load", async () => {
+    const currentDir = window.location.pathname.endsWith("/")
+      ? window.location.pathname
+      : window.location.pathname.slice(0, window.location.pathname.lastIndexOf("/") + 1);
+
+    const candidates = Array.from(new Set([
+      `${currentDir}sw.js`,
+      "./sw.js",
+      "sw.js",
+      "/sw.js"
+    ]));
+
+    let lastError = null;
+    for (const candidate of candidates) {
+      try {
+        await navigator.serviceWorker.register(candidate, { scope: currentDir });
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    console.warn("Service Worker registration failed", lastError);
   }, { once: true });
 }
 
