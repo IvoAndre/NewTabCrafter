@@ -526,7 +526,7 @@ function boot() {
   positionFloatingButtons();
   applySettingsPaneWidth();
   initCollapsibleSections();
-  ensureRandomStockPhoto({ forcePick: true });
+  ensureRandomStockPhoto({ forcePick: true, trackDownload: false });
   els.body.classList.remove("preload");
   focusSearchOnBoot();
   if (!didWire) {
@@ -1835,7 +1835,9 @@ async function ensureRandomStockPhoto(options = {}) {
     if (options.forcePick || config.background.randomCurrentPhoto?.id !== pick.id) {
       pick.imageUrl = resolveUnsplashImageForViewport(pick.urls || {});
       config.background.randomCurrentPhoto = pick;
-      triggerUnsplashDownload(pick);
+      if (options.trackDownload !== false) {
+        triggerUnsplashDownload(pick);
+      }
       renderBackground();
       saveConfig();
     }
