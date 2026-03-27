@@ -547,7 +547,7 @@ function registerServiceWorkerOnce() {
     return;
   }
 
-  window.addEventListener("load", async () => {
+  const register = async () => {
     const currentDir = window.location.pathname.endsWith("/")
       ? window.location.pathname
       : window.location.pathname.slice(0, window.location.pathname.lastIndexOf("/") + 1);
@@ -570,7 +570,13 @@ function registerServiceWorkerOnce() {
     }
 
     console.warn("Service Worker registration failed", lastError);
-  }, { once: true });
+  };
+
+  if (document.readyState === "complete") {
+    register();
+  } else {
+    window.addEventListener("load", register, { once: true });
+  }
 }
 
 function focusSearchOnBoot() {
