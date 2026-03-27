@@ -19,6 +19,7 @@ const ENGINE_PRESETS = {
 const UNSPLASH_APP_ID = "906064";
 const UNSPLASH_ACCESS_KEY = "DXc4wqPdvqunuCE-7gdQ3DXMavlmCF3jucuwEv86DSo";
 const UNSPLASH_REFERRAL = "NewTabCrafter";
+const UNSPLASH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const RANDOM_STOCK_TERMS = {
   nature: "nature landscape",
   city: "city skyline night",
@@ -243,6 +244,7 @@ const defaultConfig = {
     randomCategory: "nature",
     randomCache: {},
     randomCurrentPhoto: null,
+    randomLastDownloadId: "",
     randomSeed: Date.now(),
     playlist: [],
     playlistSelectedId: ""
@@ -626,6 +628,7 @@ function sanitizeConfig() {
   if (!config.background.randomCurrentPhoto || typeof config.background.randomCurrentPhoto !== "object") {
     config.background.randomCurrentPhoto = null;
   }
+  config.background.randomLastDownloadId = String(config.background.randomLastDownloadId || "");
   migrateBackgroundPositionModel(hadBackgroundPositionMode);
   config.background.randomCategory = normalizeRandomCategory(config.background.randomCategory);
   if (typeof config.features.logo !== "boolean") {
@@ -1670,7 +1673,9 @@ async function ensureRandomStockPhoto(options = {}) {
     config.background.randomCategory = category;
     const cacheEntry = config.background.randomCache[category];
     const cachedPhotos = Array.isArray(cacheEntry?.photos) ? cacheEntry.photos : [];
-    const stale = !cacheEntry || cachedPhotos.length < 20;
+    const fetchedAt = Number(cacheEntry?.fetchedAt || 0);
+    const staleByAge = !fetchedAt || (Date.now() - fetchedAt) > UNSPLASH_CACHE_TTL_MS;
+    const stale = !cacheEntry || cachedPhotos.length < 20 || staleByAge;
 
     let photos = cachedPhotos;
     if (stale || options.forceRefresh) {
@@ -1691,6 +1696,19 @@ async function ensureRandomStockPhoto(options = {}) {
       return;
     }
 
+    for (const photo of photos) {
+      if (!photo.imageUrl) {
+        photo.imageUrl = resolveUnsplashImageForViewport(photo.urls || {});
+      }
+    }
+
+    const current = config.background.randomCurrentPhoto;
+    if (!options.forcePick && current?.id && photos.some((photo) => photo.id === current.id)) {
+      current.imageUrl = resolveUnsplashImageForViewport(current.urls || {});
+      renderBackground();
+      return;
+    }
+
     const currentId = config.background.randomCurrentPhoto?.id || "";
     const candidates = photos.filter((photo) => photo.id !== currentId);
     const pickFrom = candidates.length ? candidates : photos;
@@ -1701,6 +1719,7 @@ async function ensureRandomStockPhoto(options = {}) {
     }
 
     if (options.forcePick || config.background.randomCurrentPhoto?.id !== pick.id) {
+      pick.imageUrl = resolveUnsplashImageForViewport(pick.urls || {});
       config.background.randomCurrentPhoto = pick;
       triggerUnsplashDownload(pick);
       renderBackground();
@@ -1734,9 +1753,17 @@ async function fetchUnsplashCategory(category) {
       const userName = photo?.user?.name || "Unknown";
       const userLink = withUnsplashUtm(photo?.user?.links?.html || "https://unsplash.com");
       const photoLink = withUnsplashUtm(photo?.links?.html || "https://unsplash.com");
+      const urls = {
+        raw: String(photo?.urls?.raw || ""),
+        full: String(photo?.urls?.full || ""),
+        regular: String(photo?.urls?.regular || ""),
+        small: String(photo?.urls?.small || ""),
+        thumb: String(photo?.urls?.thumb || "")
+      };
       return {
         id: String(photo.id || crypto.randomUUID()),
-        imageUrl: `${photo?.urls?.regular || photo?.urls?.full || ""}`,
+        imageUrl: resolveUnsplashImageForViewport(urls),
+        urls,
         photographerName: userName,
         photographerUrl: userLink,
         photoUrl: photoLink,
@@ -1745,6 +1772,28 @@ async function fetchUnsplashCategory(category) {
     }).filter((photo) => Boolean(photo.imageUrl));
   } catch {
     return [];
+  }
+}
+
+function resolveUnsplashImageForViewport(urls) {
+  const fallback = String(urls?.regular || urls?.full || urls?.small || urls?.thumb || "");
+  const raw = String(urls?.raw || "");
+  if (!raw) {
+    return fallback;
+  }
+
+  const dpr = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+  const viewport = Math.max(window.innerWidth || 0, window.screen?.width || 0, 1280);
+  const targetWidth = Math.round(viewport * dpr);
+  try {
+    const parsed = new URL(raw);
+    parsed.searchParams.set("w", String(Math.max(1200, Math.min(targetWidth, 3840))));
+    parsed.searchParams.set("q", "80");
+    parsed.searchParams.set("fit", "max");
+    parsed.searchParams.set("auto", "format");
+    return parsed.toString();
+  } catch {
+    return fallback;
   }
 }
 
@@ -1763,10 +1812,12 @@ function triggerUnsplashDownload(photo) {
   if (!photo?.downloadLocation || !photo?.id) {
     return;
   }
-  if (lastUnsplashDownloadId === photo.id) {
+  const alreadyTracked = lastUnsplashDownloadId === photo.id || config.background.randomLastDownloadId === photo.id;
+  if (alreadyTracked) {
     return;
   }
   lastUnsplashDownloadId = photo.id;
+  config.background.randomLastDownloadId = photo.id;
   const sep = photo.downloadLocation.includes("?") ? "&" : "?";
   const url = `${photo.downloadLocation}${sep}client_id=${encodeURIComponent(UNSPLASH_ACCESS_KEY)}`;
   fetch(url).catch(() => {});
