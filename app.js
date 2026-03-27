@@ -20,6 +20,9 @@ const UNSPLASH_APP_ID = "906064";
 const UNSPLASH_ACCESS_KEY = "DXc4wqPdvqunuCE-7gdQ3DXMavlmCF3jucuwEv86DSo";
 const UNSPLASH_REFERRAL = "NewTabCrafter";
 const UNSPLASH_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RANDOM_CACHE_MAX_PHOTOS_PER_CATEGORY = 20;
+const RANDOM_CACHE_MAX_CATEGORIES = 5;
+const RANDOM_CACHE_STALE_PURGE_MS = 30 * 24 * 60 * 60 * 1000;
 const RANDOM_STOCK_TERMS = {
   nature: "nature landscape",
   city: "city skyline night",
@@ -243,6 +246,7 @@ const defaultConfig = {
     scale: 100,
     randomCategory: "nature",
     randomCache: {},
+    randomQueue: {},
     randomCurrentPhoto: null,
     randomLastDownloadId: "",
     randomSeed: Date.now(),
@@ -652,6 +656,9 @@ function sanitizeConfig() {
   if (typeof config.background.randomCache !== "object" || config.background.randomCache === null) {
     config.background.randomCache = {};
   }
+  if (typeof config.background.randomQueue !== "object" || config.background.randomQueue === null) {
+    config.background.randomQueue = {};
+  }
   if (!config.background.randomCurrentPhoto || typeof config.background.randomCurrentPhoto !== "object") {
     config.background.randomCurrentPhoto = null;
   }
@@ -717,6 +724,7 @@ function loadConfig() {
 
 function saveConfig() {
   try {
+    pruneRandomCacheAndQueue();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     return true;
   } catch {
@@ -1685,6 +1693,87 @@ function normalizeRandomCategory(category) {
   return RANDOM_STOCK_TERMS[value] ? value : "nature";
 }
 
+function pruneRandomCacheAndQueue() {
+  const bg = config?.background;
+  if (!bg || typeof bg !== "object") {
+    return;
+  }
+
+  if (typeof bg.randomCache !== "object" || bg.randomCache === null) {
+    bg.randomCache = {};
+  }
+  if (typeof bg.randomQueue !== "object" || bg.randomQueue === null) {
+    bg.randomQueue = {};
+  }
+
+  const currentCategory = normalizeRandomCategory(bg.randomCategory);
+  const now = Date.now();
+  const normalizedEntries = [];
+
+  for (const [rawCategory, entry] of Object.entries(bg.randomCache)) {
+    const category = normalizeRandomCategory(rawCategory);
+    const photosRaw = Array.isArray(entry?.photos) ? entry.photos : [];
+    const photos = photosRaw
+      .filter((photo) => photo && typeof photo === "object" && String(photo.id || "").trim())
+      .slice(0, RANDOM_CACHE_MAX_PHOTOS_PER_CATEGORY);
+
+    if (!photos.length) {
+      continue;
+    }
+
+    const fetchedAt = Number(entry?.fetchedAt || 0) || 0;
+    const isStale = fetchedAt > 0 && (now - fetchedAt) > RANDOM_CACHE_STALE_PURGE_MS;
+    if (isStale && category !== currentCategory) {
+      continue;
+    }
+
+    normalizedEntries.push({
+      category,
+      fetchedAt,
+      photos
+    });
+  }
+
+  normalizedEntries.sort((a, b) => b.fetchedAt - a.fetchedAt);
+  const keepCategories = new Set();
+  keepCategories.add(currentCategory);
+  for (const entry of normalizedEntries) {
+    if (keepCategories.size >= RANDOM_CACHE_MAX_CATEGORIES) {
+      break;
+    }
+    keepCategories.add(entry.category);
+  }
+
+  const nextCache = {};
+  for (const entry of normalizedEntries) {
+    if (!keepCategories.has(entry.category)) {
+      continue;
+    }
+    nextCache[entry.category] = {
+      fetchedAt: entry.fetchedAt,
+      photos: entry.photos
+    };
+  }
+  bg.randomCache = nextCache;
+
+  const nextQueue = {};
+  for (const [rawCategory, queueRaw] of Object.entries(bg.randomQueue)) {
+    const category = normalizeRandomCategory(rawCategory);
+    const cacheEntry = bg.randomCache[category];
+    if (!cacheEntry) {
+      continue;
+    }
+    const validIds = new Set(cacheEntry.photos.map((photo) => String(photo.id)));
+    const queue = Array.isArray(queueRaw)
+      ? queueRaw.map((id) => String(id || "")).filter((id, index, arr) => id && validIds.has(id) && arr.indexOf(id) === index)
+      : [];
+    if (queue.length) {
+      nextQueue[category] = queue;
+    }
+  }
+  bg.randomQueue = nextQueue;
+}
+
 async function ensureRandomStockPhoto(options = {}) {
   if (config.background.type !== "random") {
     renderUnsplashAttribution(null);
@@ -1737,9 +1826,7 @@ async function ensureRandomStockPhoto(options = {}) {
     }
 
     const currentId = config.background.randomCurrentPhoto?.id || "";
-    const candidates = photos.filter((photo) => photo.id !== currentId);
-    const pickFrom = candidates.length ? candidates : photos;
-    const pick = pickFrom[Math.floor(Math.random() * pickFrom.length)] || photos[0];
+    const pick = getNextRandomPhotoFromQueue(category, photos, currentId);
 
     if (!pick) {
       return;
@@ -1759,6 +1846,40 @@ async function ensureRandomStockPhoto(options = {}) {
   } finally {
     randomFetchPromise = null;
   }
+}
+
+function getNextRandomPhotoFromQueue(category, photos, currentId) {
+  const ids = photos.map((photo) => String(photo.id || "")).filter(Boolean);
+  if (!ids.length) {
+    return null;
+  }
+
+  const allowed = new Set(ids.filter((id) => id !== currentId));
+  const existingQueue = Array.isArray(config.background.randomQueue[category])
+    ? config.background.randomQueue[category].map((id) => String(id || "")).filter((id) => allowed.has(id))
+    : [];
+
+  let queue = existingQueue;
+  if (!queue.length) {
+    queue = shuffleArray(Array.from(allowed));
+  }
+
+  let nextId = queue.shift() || "";
+  if (!nextId) {
+    nextId = ids.find((id) => id !== currentId) || ids[0];
+  }
+
+  config.background.randomQueue[category] = queue;
+  return photos.find((photo) => photo.id === nextId) || photos[0] || null;
+}
+
+function shuffleArray(values) {
+  const array = [...values];
+  for (let index = array.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [array[index], array[target]] = [array[target], array[index]];
+  }
+  return array;
 }
 
 async function fetchUnsplashCategory(category) {
