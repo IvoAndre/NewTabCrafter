@@ -1,4 +1,6 @@
 const STORAGE_KEY = "newtab.config";
+const SYNC_PUBLISH_HOST = "newtab.rivodani.com";
+const SYNC_COOKIE_NAME = "newtab_config_sync";
 
 const CORNERS = ["top-left", "top-right", "bottom-left", "bottom-right"];
 const CORNER_ICONS = {
@@ -322,7 +324,7 @@ const modalState = {
   pendingIconData: ""
 };
 
-let config = loadConfig();
+var config = loadConfig();
 let dragState = { listName: "", id: "" };
 let didWire = false;
 let didRegisterServiceWorker = false;
@@ -498,14 +500,28 @@ const els = {
   modalCancel: document.getElementById("modalCancel")
 };
 
-if (document.readyState === "complete") {
+async function startBoot() {
+  try {
+    await maybeHydrateExtensionFromSyncCookie();
+  } catch {
+    // Extension messaging / cookie optional
+  }
+  config = loadConfig();
   boot();
-} else {
-  window.addEventListener("load", boot, { once: true });
 }
 
-function boot() {
-  registerServiceWorkerOnce();
+if (document.readyState === "complete") {
+  startBoot();
+} else {
+  window.addEventListener("load", startBoot, { once: true });
+}
+
+function boot(options = {}) {
+  const skipSave = options.skipSave === true;
+  const skipServiceWorker = options.skipServiceWorker === true;
+  if (!skipServiceWorker) {
+    registerServiceWorkerOnce();
+  }
   sanitizeConfig();
   rotatePlaylistSelectionOnBoot();
   enforceAddingModeForEmptyShortcuts();
@@ -526,14 +542,16 @@ function boot() {
   positionFloatingButtons();
   applySettingsPaneWidth();
   initCollapsibleSections();
-  ensureRandomStockPhoto({ forcePick: true, trackDownload: false });
+  ensureRandomStockPhoto({ forcePick: false, trackDownload: false });
   els.body.classList.remove("preload");
   focusSearchOnBoot();
   if (!didWire) {
     wireEvents();
     didWire = true;
   }
-  saveConfig();
+  if (!skipSave) {
+    saveConfig();
+  }
 }
 
 function registerServiceWorkerOnce() {
@@ -722,10 +740,133 @@ function loadConfig() {
   }
 }
 
+function stripConfigForSyncTransport(cfg) {
+  const stripped = structuredClone(cfg);
+  if (stripped.background) {
+    stripped.background.imageData = "";
+    stripped.background.playlist = [];
+    stripped.background.randomCache = {};
+    stripped.background.randomQueue = {};
+  }
+  if (stripped.logo) {
+    stripped.logo.imageData = "";
+  }
+  if (stripped.settingsButton) {
+    stripped.settingsButton.profileImageData = "";
+  }
+  if (stripped.searchEngine) {
+    stripped.searchEngine.customIconData = "";
+  }
+  if (stripped.shortcuts) {
+    if (stripped.shortcuts.main) {
+      stripped.shortcuts.main = stripped.shortcuts.main.map((s) => ({
+        ...s,
+        customIconData: ""
+      }));
+    }
+    if (stripped.shortcuts.apps) {
+      stripped.shortcuts.apps = stripped.shortcuts.apps.map((s) => ({
+        ...s,
+        customIconData: ""
+      }));
+    }
+  }
+  return stripped;
+}
+
+function btoaUtf8(text) {
+  try {
+    return btoa(unescape(encodeURIComponent(text)));
+  } catch {
+    return btoa(String(text));
+  }
+}
+
+function pushConfigToBrowserSyncCookie() {
+  if (typeof window === "undefined" || window.location.hostname !== SYNC_PUBLISH_HOST) {
+    return;
+  }
+  try {
+    const stripped = stripConfigForSyncTransport(structuredClone(config));
+    let json = JSON.stringify(stripped);
+    let enc = btoaUtf8(json);
+    if (enc.length > 4000) {
+      const leaner = stripConfigForSyncTransport(stripped);
+      json = JSON.stringify(leaner);
+      enc = btoaUtf8(json);
+    }
+    if (enc.length > 4000) {
+      return;
+    }
+    document.cookie = `${SYNC_COOKIE_NAME}=${encodeURIComponent(enc)}; Path=/; Max-Age=31536000; Secure; SameSite=Lax`;
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function reapplyLocalBlobsAfterRemoteMerge(merged, local) {
+  if (!merged || !local) {
+    return;
+  }
+  if (local.background) {
+    if (local.background.imageData && !merged.background?.imageData) {
+      merged.background.imageData = local.background.imageData;
+    }
+    if (Array.isArray(local.background.playlist) && local.background.playlist.length
+        && (!Array.isArray(merged.background.playlist) || merged.background.playlist.length === 0)) {
+      merged.background.playlist = local.background.playlist;
+    }
+    if (local.background.randomCache && Object.keys(local.background.randomCache).length
+        && (!merged.background.randomCache || !Object.keys(merged.background.randomCache).length)) {
+      merged.background.randomCache = { ...local.background.randomCache };
+    }
+    if (local.background.randomQueue && Object.keys(local.background.randomQueue).length
+        && (!merged.background.randomQueue || !Object.keys(merged.background.randomQueue).length)) {
+      merged.background.randomQueue = { ...local.background.randomQueue };
+    }
+  }
+  if (local.logo?.imageData && !merged.logo?.imageData) {
+    merged.logo.imageData = local.logo.imageData;
+  }
+  if (local.settingsButton?.profileImageData && !merged.settingsButton?.profileImageData) {
+    merged.settingsButton.profileImageData = local.settingsButton.profileImageData;
+  }
+  if (local.searchEngine?.customIconData && !merged.searchEngine?.customIconData) {
+    merged.searchEngine.customIconData = local.searchEngine.customIconData;
+  }
+  const stitchShortcuts = (listName) => {
+    const loc = local.shortcuts?.[listName];
+    const m = merged.shortcuts?.[listName];
+    if (!Array.isArray(loc) || !Array.isArray(m)) {
+      return;
+    }
+    for (let i = 0; i < m.length; i += 1) {
+      const lc = loc.find((s) => s.id === m[i].id);
+      if (lc?.customIconData && !m[i].customIconData) {
+        m[i].customIconData = lc.customIconData;
+      }
+    }
+  };
+  stitchShortcuts("main");
+  stitchShortcuts("apps");
+}
+
+function isExtensionRuntimeContext() {
+  try {
+    return Boolean(typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id);
+  } catch {
+    return false;
+  }
+}
+
 function saveConfig() {
   try {
     pruneRandomCacheAndQueue();
+    if (typeof config === "object" && config) {
+      config._syncRev = Date.now();
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    pushConfigToBrowserSyncCookie();
     return true;
   } catch {
     console.error("Failed to save settings. Stored data may exceed browser localStorage quota.");
@@ -754,6 +895,52 @@ function deepMerge(base, extra) {
     }
   }
   return out;
+}
+
+async function maybeHydrateExtensionFromSyncCookie() {
+  if (!isExtensionRuntimeContext()) {
+    return false;
+  }
+  const remote = await new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage({ action: "loadConfigFromCookie" }, (res) => {
+        if (chrome.runtime.lastError) {
+          resolve(null);
+          return;
+        }
+        resolve(res && res.config ? res.config : null);
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+  if (!remote || typeof remote !== "object") {
+    return false;
+  }
+
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(deepMerge(structuredClone(defaultConfig), remote)));
+    return true;
+  }
+
+  let local;
+  try {
+    local = JSON.parse(raw);
+  } catch {
+    return false;
+  }
+
+  const localRev = Number(local._syncRev || 0);
+  const remoteRev = Number(remote._syncRev || 0);
+  if (remoteRev <= localRev) {
+    return false;
+  }
+
+  const merged = deepMerge(deepMerge(structuredClone(defaultConfig), local), remote);
+  reapplyLocalBlobsAfterRemoteMerge(merged, local);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  return true;
 }
 
 function t(key) {
@@ -929,6 +1116,7 @@ function renderSearch() {
   if (!hideIcon) {
     els.searchIcon.src = iconSrc;
     els.searchIcon.style.transform = `scale(${config.searchEngine.iconScale / 100})`;
+    armImageFallback(els.searchIcon);
   }
   els.customEngineFields.classList.toggle("hidden", config.searchEngine.preset !== "custom");
   els.engineIconUploadWrap.classList.toggle("hidden", config.searchEngine.iconMode !== "custom");
@@ -943,6 +1131,39 @@ function normalizeSuggestionText(value) {
 
 function cleanSuggestionList(values) {
   return (values || []).map((value) => normalizeSuggestionText(value)).filter(Boolean);
+}
+
+async function fetchSearchSuggestPayload(url, signal) {
+  if (isExtensionRuntimeContext()) {
+    const res = await new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ action: "fetchSuggest", url }, (response) => {
+          if (chrome.runtime.lastError) {
+            resolve(null);
+            return;
+          }
+          resolve(response);
+        });
+      } catch {
+        resolve(null);
+      }
+    });
+    if (!res || !res.ok || typeof res.text !== "string") {
+      throw new Error("Suggest fetch failed");
+    }
+    return JSON.parse(res.text);
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    mode: "cors",
+    cache: "no-store",
+    signal
+  });
+  if (!response.ok) {
+    throw new Error(`Suggest failed (${response.status})`);
+  }
+  return response.json();
 }
 
 function getSearchSuggestRequest(engineKey, query) {
@@ -1071,16 +1292,7 @@ async function fetchSearchSuggestions(query) {
   if (request) {
     suggestionsAbortController = new AbortController();
     try {
-      const response = await fetch(request.url, {
-        method: "GET",
-        mode: "cors",
-        cache: "no-store",
-        signal: suggestionsAbortController.signal
-      });
-      if (!response.ok) {
-        throw new Error(`Suggest failed (${response.status})`);
-      }
-      const payload = await response.json();
+      const payload = await fetchSearchSuggestPayload(request.url, suggestionsAbortController.signal);
       if (token !== suggestionsRequestToken) {
         return;
       }
@@ -1094,6 +1306,14 @@ async function fetchSearchSuggestions(query) {
         return;
       }
     }
+  }
+
+  if (isExtensionRuntimeContext()) {
+    if (token !== suggestionsRequestToken) {
+      return;
+    }
+    clearSearchSuggestions();
+    return;
   }
 
   const fallback = await fetchGoogleSuggestionsJsonp(clean);
@@ -1278,23 +1498,30 @@ function buildShortcutTile(shortcut, listName, showTextSetting) {
     badge.style.background = c2 ? `linear-gradient(135deg, ${c1}, ${c2})` : c1;
     tile.appendChild(badge);
   } else if (shortcut.iconMode === "fontawesome") {
-    const faIcon = document.createElement("i");
-    const safeClass = buildFaClassList(shortcut.faClass);
-    faIcon.className = `faShortcutIcon ${safeClass}`;
-    const c1 = normalizeHexColor(shortcut.faColor1, "#74b1ff");
-    const c2Raw = String(shortcut.faColor2 || "").trim();
-    if (c2Raw) {
-      const c2 = normalizeHexColor(c2Raw, c1);
-      faIcon.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
-      faIcon.style.webkitBackgroundClip = "text";
-      faIcon.style.backgroundClip = "text";
-      faIcon.style.color = "transparent";
-      faIcon.style.webkitTextFillColor = "transparent";
+    if (!isFontAwesomeAvailable()) {
+      const fallback = document.createElement("img");
+      fallback.src = fallbackIcon();
+      armImageFallback(fallback);
+      tile.appendChild(fallback);
     } else {
-      faIcon.style.color = c1;
+      const faIcon = document.createElement("i");
+      const safeClass = buildFaClassList(shortcut.faClass);
+      faIcon.className = `faShortcutIcon ${safeClass}`;
+      const c1 = normalizeHexColor(shortcut.faColor1, "#74b1ff");
+      const c2Raw = String(shortcut.faColor2 || "").trim();
+      if (c2Raw) {
+        const c2 = normalizeHexColor(c2Raw, c1);
+        faIcon.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+        faIcon.style.webkitBackgroundClip = "text";
+        faIcon.style.backgroundClip = "text";
+        faIcon.style.color = "transparent";
+        faIcon.style.webkitTextFillColor = "transparent";
+      } else {
+        faIcon.style.color = c1;
+      }
+      faIcon.style.transform = `scale(${(shortcut.iconScale ?? 100) / 100})`;
+      tile.appendChild(faIcon);
     }
-    faIcon.style.transform = `scale(${(shortcut.iconScale ?? 100) / 100})`;
-    tile.appendChild(faIcon);
   } else {
     const icon = document.createElement("img");
     if (!iconSrc) {
@@ -1302,6 +1529,7 @@ function buildShortcutTile(shortcut, listName, showTextSetting) {
     } else {
       icon.src = iconSrc;
       icon.style.transform = `scale(${(shortcut.iconScale ?? 100) / 100})`;
+      armImageFallback(icon);
     }
     tile.appendChild(icon);
   }
@@ -2975,7 +3203,31 @@ function getFavicon(url, overrideUrl = "") {
 }
 
 function fallbackIcon() {
-  return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect width='100%25' height='100%25' rx='8' fill='%239aa3c0'/%3E%3C/svg%3E";
+  const defaultFill = "#9aa3c0";
+  const hex = normalizeHexColor(resolveThemePalette().component, defaultFill);
+  const fill = encodeURIComponent(hex);
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect width='100%25' height='100%25' rx='8' fill='${fill}'/%3E%3C/svg%3E`;
+}
+
+function armImageFallback(img) {
+  if (!img) {
+    return;
+  }
+  img.dataset.fallbackApplied = "0";
+  img.onerror = () => {
+    if (img.dataset.fallbackApplied === "1") {
+      return;
+    }
+    img.dataset.fallbackApplied = "1";
+    img.src = fallbackIcon();
+  };
+}
+
+function isFontAwesomeAvailable() {
+  if (!document.fonts || typeof document.fonts.check !== "function") {
+    return true;
+  }
+  return document.fonts.check("12px 'Font Awesome 6 Free'") || document.fonts.check("12px 'Font Awesome 6 Brands'");
 }
 
 function buildFaClassList(faClass) {
