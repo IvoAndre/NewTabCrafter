@@ -782,8 +782,16 @@ function btoaUtf8(text) {
   }
 }
 
+function shouldPublishSyncCookie() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const host = window.location.hostname;
+  return host === SYNC_PUBLISH_HOST || host.endsWith(`.${SYNC_PUBLISH_HOST}`);
+}
+
 function pushConfigToBrowserSyncCookie() {
-  if (typeof window === "undefined" || window.location.hostname !== SYNC_PUBLISH_HOST) {
+  if (!shouldPublishSyncCookie() || window.location.protocol !== "https:") {
     return;
   }
   try {
@@ -798,7 +806,8 @@ function pushConfigToBrowserSyncCookie() {
     if (enc.length > 4000) {
       return;
     }
-    document.cookie = `${SYNC_COOKIE_NAME}=${encodeURIComponent(enc)}; Path=/; Max-Age=31536000; Secure; SameSite=Lax`;
+    const value = encodeURIComponent(enc);
+    document.cookie = `${SYNC_COOKIE_NAME}=${value}; Domain=.${SYNC_PUBLISH_HOST}; Path=/; Max-Age=31536000; Secure; SameSite=Lax`;
   } catch {
     // ignore quota / private mode
   }
