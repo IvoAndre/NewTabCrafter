@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#24344f" />
+  <title>NewTabCrafter</title>
+  <link rel="icon" href="icons/favicon.ico" sizes="48x48 32x32 16x16" />
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="icons/site.webmanifest" />
+  <link rel="stylesheet" href="material-symbols-outlined.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="setupPage">
+  <div id="backgroundLayer" aria-hidden="true"></div>
+
+  <div class="setupTopBar">
+    <label class="setupLangLabel">
+      <span class="material-symbols-outlined setupLangIcon" aria-hidden="true">translate</span>
+      <span id="setupLangText">Language</span>
+      <select id="setupLanguage" aria-labelledby="setupLangText">
+        <option value="en-US">English (US)</option>
+        <option value="pt-PT">Português (PT)</option>
+      </select>
+    </label>
+  </div>
+
+  <main class="setupShell">
+    <div class="setupCard">
+      <header class="setupCardHeader">
+        <h1 id="setupTitle">Import settings</h1>
+      </header>
+      <div class="setupCardBody">
+        <section class="setupSectionIntro">
+          <p id="setupIntro" class="setupIntro"></p>
+          <ol id="setupSteps" class="setupSteps"></ol>
+        </section>
+        <section class="setupSectionActions">
+          <div class="setupActionGrid">
+            <label class="setupPrimaryBtn setupActionCell">
+              <span class="material-symbols-outlined" aria-hidden="true">upload</span>
+              <span id="setupChooseFileLabel">Choose file…</span>
+              <input id="importFile" type="file" accept="application/json,.json" />
+            </label>
+            <button type="button" class="setupGhostBtn setupActionCell" id="skipBtn"></button>
+            <button type="button" class="setupGhostBtn setupActionCell setupActionCell--span" id="openNewtabBtn"></button>
+          </div>
+          <p id="setupStatus" class="setupStatus" role="status"></p>
+        </section>
+      </div>
+      <footer class="setupFooter">
+        <a class="repoIconLink" href="https://github.com/IvoAndre/NewTabCrafter" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
+          <span class="material-symbols-outlined" aria-hidden="true">code</span>
+        </a>
+      </footer>
+    </div>
+  </main>
+  <script src="setup.js"></script>
+</body>
+</html>
