@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "NewTabCrafter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lightweight, customizable new tab page and homepage replacement for Firefox",
   "permissions": [
     "tabs",
