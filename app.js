@@ -543,6 +543,7 @@ function boot(options = {}) {
   applySettingsPaneWidth();
   initCollapsibleSections();
   ensureRandomStockPhoto({ forcePick: false, trackDownload: false });
+  scheduleFontAwesomeShortcutRefresh();
   els.body.classList.remove("preload");
   focusSearchOnBoot();
   if (!didWire) {
@@ -550,7 +551,8 @@ function boot(options = {}) {
     didWire = true;
   }
   if (!skipSave) {
-    saveConfig();
+    const bumpRev = options.bumpSyncRevOnPersist === true;
+    saveConfig({ bumpSyncRev: bumpRev });
   }
 }
 
@@ -868,14 +870,17 @@ function isExtensionRuntimeContext() {
   }
 }
 
-function saveConfig() {
+function saveConfig(options = {}) {
+  const bumpSyncRev = options.bumpSyncRev !== false;
   try {
     pruneRandomCacheAndQueue();
-    if (typeof config === "object" && config) {
+    if (bumpSyncRev && typeof config === "object" && config) {
       config._syncRev = Date.now();
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    pushConfigToBrowserSyncCookie();
+    if (bumpSyncRev) {
+      pushConfigToBrowserSyncCookie();
+    }
     return true;
   } catch {
     console.error("Failed to save settings. Stored data may exceed browser localStorage quota.");
@@ -1489,6 +1494,19 @@ function renderAllShortcuts() {
   renderAppsShortcuts();
 }
 
+function scheduleFontAwesomeShortcutRefresh() {
+  if (!document.fonts || typeof document.fonts.ready === "undefined") {
+    return;
+  }
+  document.fonts.ready.then(() => {
+    const lists = config.shortcuts.main.concat(config.shortcuts.apps);
+    if (!lists.some((s) => s.iconMode === "fontawesome")) {
+      return;
+    }
+    renderAllShortcuts();
+  });
+}
+
 function buildShortcutTile(shortcut, listName, showTextSetting) {
   const tile = document.createElement("div");
   tile.className = "shortcutTile";
@@ -1507,30 +1525,23 @@ function buildShortcutTile(shortcut, listName, showTextSetting) {
     badge.style.background = c2 ? `linear-gradient(135deg, ${c1}, ${c2})` : c1;
     tile.appendChild(badge);
   } else if (shortcut.iconMode === "fontawesome") {
-    if (!isFontAwesomeAvailable()) {
-      const fallback = document.createElement("img");
-      fallback.src = fallbackIcon();
-      armImageFallback(fallback);
-      tile.appendChild(fallback);
+    const faIcon = document.createElement("i");
+    const safeClass = buildFaClassList(shortcut.faClass);
+    faIcon.className = `faShortcutIcon ${safeClass}`;
+    const c1 = normalizeHexColor(shortcut.faColor1, "#74b1ff");
+    const c2Raw = String(shortcut.faColor2 || "").trim();
+    if (c2Raw) {
+      const c2 = normalizeHexColor(c2Raw, c1);
+      faIcon.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+      faIcon.style.webkitBackgroundClip = "text";
+      faIcon.style.backgroundClip = "text";
+      faIcon.style.color = "transparent";
+      faIcon.style.webkitTextFillColor = "transparent";
     } else {
-      const faIcon = document.createElement("i");
-      const safeClass = buildFaClassList(shortcut.faClass);
-      faIcon.className = `faShortcutIcon ${safeClass}`;
-      const c1 = normalizeHexColor(shortcut.faColor1, "#74b1ff");
-      const c2Raw = String(shortcut.faColor2 || "").trim();
-      if (c2Raw) {
-        const c2 = normalizeHexColor(c2Raw, c1);
-        faIcon.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
-        faIcon.style.webkitBackgroundClip = "text";
-        faIcon.style.backgroundClip = "text";
-        faIcon.style.color = "transparent";
-        faIcon.style.webkitTextFillColor = "transparent";
-      } else {
-        faIcon.style.color = c1;
-      }
-      faIcon.style.transform = `scale(${(shortcut.iconScale ?? 100) / 100})`;
-      tile.appendChild(faIcon);
+      faIcon.style.color = c1;
     }
+    faIcon.style.transform = `scale(${(shortcut.iconScale ?? 100) / 100})`;
+    tile.appendChild(faIcon);
   } else {
     const icon = document.createElement("img");
     if (!iconSrc) {
@@ -2039,7 +2050,7 @@ async function ensureRandomStockPhoto(options = {}) {
           fetchedAt: Date.now(),
           photos
         };
-        saveConfig();
+        saveConfig({ bumpSyncRev: false });
       }
     }
 
@@ -2076,7 +2087,7 @@ async function ensureRandomStockPhoto(options = {}) {
         triggerUnsplashDownload(pick);
       }
       renderBackground();
-      saveConfig();
+      saveConfig({ bumpSyncRev: false });
     }
   })();
 
@@ -2864,7 +2875,7 @@ function wireEvents() {
   els.exportSettings.addEventListener("click", exportSettings);
   els.resetSettings.addEventListener("click", () => {
     config = structuredClone(defaultConfig);
-    boot();
+    boot({ bumpSyncRevOnPersist: true });
   });
   els.importSettings.addEventListener("change", importSettings);
 
@@ -3232,13 +3243,6 @@ function armImageFallback(img) {
   };
 }
 
-function isFontAwesomeAvailable() {
-  if (!document.fonts || typeof document.fonts.check !== "function") {
-    return true;
-  }
-  return document.fonts.check("12px 'Font Awesome 6 Free'") || document.fonts.check("12px 'Font Awesome 6 Brands'");
-}
-
 function buildFaClassList(faClass) {
   const raw = String(faClass || "").trim();
   const tokens = raw.split(/\s+/).filter((token) => /^fa[a-z0-9-]*$/i.test(token));
@@ -3382,7 +3386,7 @@ async function importSettings(event) {
   try {
     const text = await file.text();
     config = deepMerge(structuredClone(defaultConfig), JSON.parse(text));
-    boot();
+    boot({ bumpSyncRevOnPersist: true });
   } catch {
     alert("Invalid settings file");
   } finally {
