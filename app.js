@@ -1065,7 +1065,17 @@ function renderSearchSuggestions(suggestions) {
     return;
   }
 
-  els.searchSuggestions.innerHTML = unique.map((item, index) => `<button class="searchSuggestionItem" type="button" role="option" data-index="${index}" data-value="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("");
+  els.searchSuggestions.innerHTML = "";
+  unique.forEach((item, index) => {
+    const button = document.createElement("button");
+    button.className = "searchSuggestionItem";
+    button.type = "button";
+    button.setAttribute("role", "option");
+    button.dataset.index = String(index);
+    button.dataset.value = item;
+    button.textContent = item;
+    els.searchSuggestions.appendChild(button);
+  });
   els.searchSuggestions.classList.remove("hidden");
   els.searchSuggestions.setAttribute("aria-hidden", "false");
   searchSuggestionItems = Array.from(els.searchSuggestions.querySelectorAll(".searchSuggestionItem"));
@@ -1477,7 +1487,10 @@ function renderCornerPicker(container, key, selected) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "cornerBtn";
-    btn.innerHTML = `<span class="material-symbols-outlined">${CORNER_ICONS[corner]}</span>`;
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined";
+    icon.textContent = CORNER_ICONS[corner];
+    btn.appendChild(icon);
     btn.classList.toggle("active", corner === selected);
     btn.addEventListener("click", () => {
       config.layout[key] = corner;
@@ -2050,11 +2063,23 @@ function renderUnsplashAttribution(photo) {
     return;
   }
 
-  const name = escapeHtml(photo.photographerName || "Unknown");
-  const photographerUrl = escapeHtml(photo.photographerUrl || "https://unsplash.com");
-  const photoUrl = escapeHtml(photo.photoUrl || "https://unsplash.com");
-  els.unsplashAttributionText.innerHTML = `Photo by <a href="${photographerUrl}" target="_blank" rel="noopener noreferrer">${name}</a> on <a href="${photoUrl}" target="_blank" rel="noopener noreferrer">Unsplash</a>`;
+  els.unsplashAttributionText.innerHTML = "";
+  els.unsplashAttributionText.append(
+    "Photo by ",
+    createExternalTextLink(photo.photographerName || "Unknown", photo.photographerUrl || "https://unsplash.com"),
+    " on ",
+    createExternalTextLink("Unsplash", photo.photoUrl || "https://unsplash.com")
+  );
   els.unsplashAttribution.classList.remove("hidden");
+}
+
+function createExternalTextLink(text, href) {
+  const link = document.createElement("a");
+  link.href = href;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = text;
+  return link;
 }
 
 function positionFloatingButtons() {
