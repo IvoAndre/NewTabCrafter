@@ -28,8 +28,20 @@ const RANDOM_STOCK_TERMS = {
   city: "city skyline night",
   tech: "technology abstract",
   minimal: "minimal clean background",
-  space: "space galaxy stars"
+  space: "space galaxy stars",
+  mountains: "mountains landscape",
+  beach: "beach ocean sunset",
+  forest: "forest trees mist",
+  desert: "desert dunes",
+  ocean: "ocean waves",
+  architecture: "architecture interior exterior",
+  travel: "travel destination landscape",
+  coffee: "coffee cafe cozy",
+  cars: "classic car automotive",
+  art: "art studio gallery"
 };
+const RANDOM_CUSTOM_CATEGORY = "custom";
+const RANDOM_CUSTOM_KEY_PREFIX = "custom:";
 
 const I18N = {
   "en-US": {
@@ -70,6 +82,8 @@ const I18N = {
     gradientBlur: "Gradient blur (px)",
     uploadBackground: "Upload image",
     randomCategory: "Random category",
+    randomCustomTerms: "Custom search terms",
+    applyCustomSearch: "Apply",
     playlistUpload: "Upload list images",
     playlistSelect: "List image",
     playlistShuffle: "Pick random now",
@@ -152,6 +166,8 @@ const I18N = {
     gradientBlur: "Desfoque do gradiente (px)",
     uploadBackground: "Carregar imagem",
     randomCategory: "Categoria aleatória",
+    randomCustomTerms: "Termos de pesquisa personalizados",
+    applyCustomSearch: "Aplicar",
     playlistUpload: "Carregar imagens da lista",
     playlistSelect: "Imagem da lista",
     playlistShuffle: "Escolher aleatória agora",
@@ -245,6 +261,7 @@ const defaultConfig = {
     posY: 0,
     scale: 100,
     randomCategory: "nature",
+    randomCustomTerms: "",
     randomCache: {},
     randomQueue: {},
     randomCurrentPhoto: null,
@@ -409,6 +426,8 @@ const els = {
   gradientBlurValue: document.getElementById("gradientBlurValue"),
   backgroundImageUpload: document.getElementById("backgroundImageUpload"),
   randomCategory: document.getElementById("randomCategory"),
+  randomCustomTerms: document.getElementById("randomCustomTerms"),
+  randomCustomApply: document.getElementById("randomCustomApply"),
   backgroundPosX: document.getElementById("backgroundPosX"),
   backgroundPosXValue: document.getElementById("backgroundPosXValue"),
   backgroundPosY: document.getElementById("backgroundPosY"),
@@ -530,11 +549,10 @@ function boot(options = {}) {
   positionFloatingButtons();
   applySettingsPaneWidth();
   initCollapsibleSections();
-  const extRandomNewTab =
-    isExtensionRuntimeContext() && config.background.type === "random";
+  const randomPageLoad = config.background.type === "random";
   ensureRandomStockPhoto({
-    forcePick: extRandomNewTab,
-    trackDownload: extRandomNewTab
+    forcePick: randomPageLoad,
+    trackDownload: randomPageLoad
   });
   scheduleFontAwesomeShortcutRefresh();
   els.body.classList.remove("preload");
@@ -679,6 +697,7 @@ function sanitizeConfig() {
   config.background.randomLastDownloadId = String(config.background.randomLastDownloadId || "");
   migrateBackgroundPositionModel(hadBackgroundPositionMode);
   config.background.randomCategory = normalizeRandomCategory(config.background.randomCategory);
+  config.background.randomCustomTerms = normalizeRandomCustomTerms(config.background.randomCustomTerms);
   if (typeof config.features.logo !== "boolean") {
     config.features.logo = true;
   }
@@ -1587,7 +1606,10 @@ function syncForm() {
   setPairValue(els.backgroundPosY, els.backgroundPosYValue, config.background.posY);
   setPairValue(els.backgroundScale, els.backgroundScaleValue, config.background.scale);
 
-  els.randomCategory.value = config.background.randomCategory;
+  els.randomCategory.value = normalizeRandomCategory(config.background.randomCategory);
+  if (els.randomCustomTerms) {
+    els.randomCustomTerms.value = config.background.randomCustomTerms;
+  }
   renderPlaylistSelect();
   const selected = getSelectedPlaylistItem();
   setPairValue(els.playlistPosX, els.playlistPosXValue, selected?.posX ?? 0);
@@ -1714,6 +1736,7 @@ function updateBackgroundFieldVisibility() {
       || (type === "gradient" && (k === "gradientDegree" || k === "gradientColors" || k === "gradientBlur"))
       || (type === "image" && (k === "imageData" || k === "imagePositionX" || k === "imagePositionY" || k === "imageScale"))
       || (type === "random" && k === "randomCategory")
+      || (type === "random" && k === "randomCustomTerms" && normalizeRandomCategory(config.background.randomCategory) === RANDOM_CUSTOM_CATEGORY)
       || (type === "playlist" && ["playlistUpload", "playlistSelect", "playlistShuffle", "playlistRemove", "playlistPosX", "playlistPosY", "playlistScale"].includes(k));
     field.classList.toggle("hidden", !show);
   });
@@ -1763,6 +1786,9 @@ function initCollapsibleSections() {
 
 function normalizeRandomCategory(category) {
   const value = String(category || "").toLowerCase();
+  if (value === RANDOM_CUSTOM_CATEGORY || value.startsWith(RANDOM_CUSTOM_KEY_PREFIX)) {
+    return RANDOM_CUSTOM_CATEGORY;
+  }
   if (value === "urban") {
     return "city";
   }
@@ -1773,6 +1799,31 @@ function normalizeRandomCategory(category) {
     return "nature";
   }
   return RANDOM_STOCK_TERMS[value] ? value : "nature";
+}
+
+function normalizeRandomCustomTerms(terms) {
+  return String(terms || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+}
+
+function getRandomCategoryCacheKey(category = config.background.randomCategory) {
+  const normalized = normalizeRandomCategory(category);
+  if (normalized !== RANDOM_CUSTOM_CATEGORY) {
+    return normalized;
+  }
+
+  const terms = normalizeRandomCustomTerms(config.background.randomCustomTerms);
+  return terms ? `${RANDOM_CUSTOM_KEY_PREFIX}${terms.toLowerCase()}` : RANDOM_CUSTOM_CATEGORY;
+}
+
+function getRandomCategorySearchTerm(categoryKey) {
+  const key = String(categoryKey || "");
+  if (key.startsWith(RANDOM_CUSTOM_KEY_PREFIX)) {
+    return key.slice(RANDOM_CUSTOM_KEY_PREFIX.length);
+  }
+  return RANDOM_STOCK_TERMS[key] || RANDOM_STOCK_TERMS.nature;
 }
 
 function pruneRandomCacheAndQueue() {
@@ -1788,12 +1839,14 @@ function pruneRandomCacheAndQueue() {
     bg.randomQueue = {};
   }
 
-  const currentCategory = normalizeRandomCategory(bg.randomCategory);
+  const currentCategory = getRandomCategoryCacheKey(bg.randomCategory);
   const now = Date.now();
   const normalizedEntries = [];
 
   for (const [rawCategory, entry] of Object.entries(bg.randomCache)) {
-    const category = normalizeRandomCategory(rawCategory);
+    const category = rawCategory.startsWith(RANDOM_CUSTOM_KEY_PREFIX)
+      ? rawCategory
+      : normalizeRandomCategory(rawCategory);
     const photosRaw = Array.isArray(entry?.photos) ? entry.photos : [];
     const photos = photosRaw
       .filter((photo) => photo && typeof photo === "object" && String(photo.id || "").trim())
@@ -1840,7 +1893,9 @@ function pruneRandomCacheAndQueue() {
 
   const nextQueue = {};
   for (const [rawCategory, queueRaw] of Object.entries(bg.randomQueue)) {
-    const category = normalizeRandomCategory(rawCategory);
+    const category = rawCategory.startsWith(RANDOM_CUSTOM_KEY_PREFIX)
+      ? rawCategory
+      : normalizeRandomCategory(rawCategory);
     const cacheEntry = bg.randomCache[category];
     if (!cacheEntry) {
       continue;
@@ -1869,7 +1924,15 @@ async function ensureRandomStockPhoto(options = {}) {
   randomFetchPromise = (async () => {
     const category = normalizeRandomCategory(config.background.randomCategory);
     config.background.randomCategory = category;
-    const cacheEntry = config.background.randomCache[category];
+    config.background.randomCustomTerms = normalizeRandomCustomTerms(config.background.randomCustomTerms);
+    const cacheKey = getRandomCategoryCacheKey(category);
+    if (category === RANDOM_CUSTOM_CATEGORY && cacheKey === RANDOM_CUSTOM_CATEGORY) {
+      config.background.randomCurrentPhoto = null;
+      renderBackground();
+      return;
+    }
+
+    const cacheEntry = config.background.randomCache[cacheKey];
     const cachedPhotos = Array.isArray(cacheEntry?.photos) ? cacheEntry.photos : [];
     const fetchedAt = Number(cacheEntry?.fetchedAt || 0);
     const staleByAge = !fetchedAt || (Date.now() - fetchedAt) > UNSPLASH_CACHE_TTL_MS;
@@ -1877,10 +1940,10 @@ async function ensureRandomStockPhoto(options = {}) {
 
     let photos = cachedPhotos;
     if (stale || options.forceRefresh) {
-      const fetched = await fetchUnsplashCategory(category);
+      const fetched = await fetchUnsplashCategory(cacheKey);
       if (fetched.length) {
         photos = fetched;
-        config.background.randomCache[category] = {
+        config.background.randomCache[cacheKey] = {
           fetchedAt: Date.now(),
           photos
         };
@@ -1908,7 +1971,7 @@ async function ensureRandomStockPhoto(options = {}) {
     }
 
     const currentId = config.background.randomCurrentPhoto?.id || "";
-    const pick = getNextRandomPhotoFromQueue(category, photos, currentId);
+    const pick = getNextRandomPhotoFromQueue(cacheKey, photos, currentId);
 
     if (!pick) {
       return;
@@ -1967,7 +2030,7 @@ function shuffleArray(values) {
 }
 
 async function fetchUnsplashCategory(category) {
-  const search = encodeURIComponent(RANDOM_STOCK_TERMS[category] || RANDOM_STOCK_TERMS.nature);
+  const search = encodeURIComponent(getRandomCategorySearchTerm(category));
   const url = `https://api.unsplash.com/search/photos?page=1&per_page=30&orientation=landscape&query=${search}`;
   try {
     const response = await fetch(url, {
@@ -2403,11 +2466,29 @@ function wireEvents() {
 
   els.randomCategory.addEventListener("change", () => {
     config.background.randomCategory = normalizeRandomCategory(els.randomCategory.value);
-    if (config.background.type === "random") {
+    updateBackgroundFieldVisibility();
+    if (config.background.type === "random" && config.background.randomCategory !== RANDOM_CUSTOM_CATEGORY) {
+      ensureRandomStockPhoto({ forcePick: true });
+    }
+    if (config.background.type === "random" && config.background.randomCategory === RANDOM_CUSTOM_CATEGORY && config.background.randomCustomTerms) {
       ensureRandomStockPhoto({ forcePick: true });
     }
     saveConfig();
   });
+
+  if (els.randomCustomApply) {
+    els.randomCustomApply.addEventListener("click", () => {
+      const previousCacheKey = getRandomCategoryCacheKey(RANDOM_CUSTOM_CATEGORY);
+      config.background.randomCategory = RANDOM_CUSTOM_CATEGORY;
+      config.background.randomCustomTerms = normalizeRandomCustomTerms(els.randomCustomTerms?.value || "");
+      const nextCacheKey = getRandomCategoryCacheKey(RANDOM_CUSTOM_CATEGORY);
+      syncForm();
+      if (config.background.type === "random") {
+        ensureRandomStockPhoto({ forcePick: true, forceRefresh: previousCacheKey !== nextCacheKey });
+      }
+      saveConfig();
+    });
+  }
 
   bindRangePair(els.backgroundPosX, els.backgroundPosXValue, (value, realtime) => {
     config.background.posX = Number(value);
