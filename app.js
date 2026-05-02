@@ -1,6 +1,4 @@
 const STORAGE_KEY = "newtab.config";
-const SYNC_PUBLISH_HOST = "newtab.rivodani.com";
-const SYNC_COOKIE_NAME = "newtab_config_sync";
 
 const CORNERS = ["top-left", "top-right", "bottom-left", "bottom-right"];
 const CORNER_ICONS = {
@@ -500,20 +498,10 @@ const els = {
   modalCancel: document.getElementById("modalCancel")
 };
 
-async function startBoot() {
-  try {
-    await maybeHydrateExtensionFromSyncCookie();
-  } catch {
-    // Extension messaging / cookie optional
-  }
-  config = loadConfig();
-  boot();
-}
-
 if (document.readyState === "complete") {
-  startBoot();
+  boot();
 } else {
-  window.addEventListener("load", startBoot, { once: true });
+  window.addEventListener("load", boot, { once: true });
 }
 
 function boot(options = {}) {
@@ -542,7 +530,12 @@ function boot(options = {}) {
   positionFloatingButtons();
   applySettingsPaneWidth();
   initCollapsibleSections();
-  ensureRandomStockPhoto({ forcePick: false, trackDownload: false });
+  const extRandomNewTab =
+    isExtensionRuntimeContext() && config.background.type === "random";
+  ensureRandomStockPhoto({
+    forcePick: extRandomNewTab,
+    trackDownload: extRandomNewTab
+  });
   scheduleFontAwesomeShortcutRefresh();
   els.body.classList.remove("preload");
   focusSearchOnBoot();
@@ -551,8 +544,7 @@ function boot(options = {}) {
     didWire = true;
   }
   if (!skipSave) {
-    const bumpRev = options.bumpSyncRevOnPersist === true;
-    saveConfig({ bumpSyncRev: bumpRev });
+    saveConfig();
   }
 }
 
@@ -567,7 +559,9 @@ function registerServiceWorkerOnce() {
   }
 
   const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  if (!isLocal && window.location.protocol !== "https:") {
+  const proto = window.location.protocol;
+  const isExtensionScheme = proto === "moz-extension:" || proto === "chrome-extension:";
+  if (!isLocal && proto !== "https:" && !isExtensionScheme) {
     return;
   }
 
@@ -742,126 +736,6 @@ function loadConfig() {
   }
 }
 
-function stripConfigForSyncTransport(cfg) {
-  const stripped = structuredClone(cfg);
-  if (stripped.background) {
-    stripped.background.imageData = "";
-    stripped.background.playlist = [];
-    stripped.background.randomCache = {};
-    stripped.background.randomQueue = {};
-  }
-  if (stripped.logo) {
-    stripped.logo.imageData = "";
-  }
-  if (stripped.settingsButton) {
-    stripped.settingsButton.profileImageData = "";
-  }
-  if (stripped.searchEngine) {
-    stripped.searchEngine.customIconData = "";
-  }
-  if (stripped.shortcuts) {
-    if (stripped.shortcuts.main) {
-      stripped.shortcuts.main = stripped.shortcuts.main.map((s) => ({
-        ...s,
-        customIconData: ""
-      }));
-    }
-    if (stripped.shortcuts.apps) {
-      stripped.shortcuts.apps = stripped.shortcuts.apps.map((s) => ({
-        ...s,
-        customIconData: ""
-      }));
-    }
-  }
-  return stripped;
-}
-
-function btoaUtf8(text) {
-  try {
-    return btoa(unescape(encodeURIComponent(text)));
-  } catch {
-    return btoa(String(text));
-  }
-}
-
-function shouldPublishSyncCookie() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  const host = window.location.hostname;
-  return host === SYNC_PUBLISH_HOST || host.endsWith(`.${SYNC_PUBLISH_HOST}`);
-}
-
-function pushConfigToBrowserSyncCookie() {
-  if (!shouldPublishSyncCookie() || window.location.protocol !== "https:") {
-    return;
-  }
-  try {
-    const stripped = stripConfigForSyncTransport(structuredClone(config));
-    let json = JSON.stringify(stripped);
-    let enc = btoaUtf8(json);
-    if (enc.length > 4000) {
-      const leaner = stripConfigForSyncTransport(stripped);
-      json = JSON.stringify(leaner);
-      enc = btoaUtf8(json);
-    }
-    if (enc.length > 4000) {
-      return;
-    }
-    const value = encodeURIComponent(enc);
-    document.cookie = `${SYNC_COOKIE_NAME}=${value}; Domain=.${SYNC_PUBLISH_HOST}; Path=/; Max-Age=31536000; Secure; SameSite=Lax`;
-  } catch {
-    // ignore quota / private mode
-  }
-}
-
-function reapplyLocalBlobsAfterRemoteMerge(merged, local) {
-  if (!merged || !local) {
-    return;
-  }
-  if (local.background) {
-    if (local.background.imageData && !merged.background?.imageData) {
-      merged.background.imageData = local.background.imageData;
-    }
-    if (Array.isArray(local.background.playlist) && local.background.playlist.length
-        && (!Array.isArray(merged.background.playlist) || merged.background.playlist.length === 0)) {
-      merged.background.playlist = local.background.playlist;
-    }
-    if (local.background.randomCache && Object.keys(local.background.randomCache).length
-        && (!merged.background.randomCache || !Object.keys(merged.background.randomCache).length)) {
-      merged.background.randomCache = { ...local.background.randomCache };
-    }
-    if (local.background.randomQueue && Object.keys(local.background.randomQueue).length
-        && (!merged.background.randomQueue || !Object.keys(merged.background.randomQueue).length)) {
-      merged.background.randomQueue = { ...local.background.randomQueue };
-    }
-  }
-  if (local.logo?.imageData && !merged.logo?.imageData) {
-    merged.logo.imageData = local.logo.imageData;
-  }
-  if (local.settingsButton?.profileImageData && !merged.settingsButton?.profileImageData) {
-    merged.settingsButton.profileImageData = local.settingsButton.profileImageData;
-  }
-  if (local.searchEngine?.customIconData && !merged.searchEngine?.customIconData) {
-    merged.searchEngine.customIconData = local.searchEngine.customIconData;
-  }
-  const stitchShortcuts = (listName) => {
-    const loc = local.shortcuts?.[listName];
-    const m = merged.shortcuts?.[listName];
-    if (!Array.isArray(loc) || !Array.isArray(m)) {
-      return;
-    }
-    for (let i = 0; i < m.length; i += 1) {
-      const lc = loc.find((s) => s.id === m[i].id);
-      if (lc?.customIconData && !m[i].customIconData) {
-        m[i].customIconData = lc.customIconData;
-      }
-    }
-  };
-  stitchShortcuts("main");
-  stitchShortcuts("apps");
-}
-
 function isExtensionRuntimeContext() {
   try {
     return Boolean(typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id);
@@ -870,17 +744,10 @@ function isExtensionRuntimeContext() {
   }
 }
 
-function saveConfig(options = {}) {
-  const bumpSyncRev = options.bumpSyncRev !== false;
+function saveConfig() {
   try {
     pruneRandomCacheAndQueue();
-    if (bumpSyncRev && typeof config === "object" && config) {
-      config._syncRev = Date.now();
-    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    if (bumpSyncRev) {
-      pushConfigToBrowserSyncCookie();
-    }
     return true;
   } catch {
     console.error("Failed to save settings. Stored data may exceed browser localStorage quota.");
@@ -909,52 +776,6 @@ function deepMerge(base, extra) {
     }
   }
   return out;
-}
-
-async function maybeHydrateExtensionFromSyncCookie() {
-  if (!isExtensionRuntimeContext()) {
-    return false;
-  }
-  const remote = await new Promise((resolve) => {
-    try {
-      chrome.runtime.sendMessage({ action: "loadConfigFromCookie" }, (res) => {
-        if (chrome.runtime.lastError) {
-          resolve(null);
-          return;
-        }
-        resolve(res && res.config ? res.config : null);
-      });
-    } catch {
-      resolve(null);
-    }
-  });
-  if (!remote || typeof remote !== "object") {
-    return false;
-  }
-
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(deepMerge(structuredClone(defaultConfig), remote)));
-    return true;
-  }
-
-  let local;
-  try {
-    local = JSON.parse(raw);
-  } catch {
-    return false;
-  }
-
-  const localRev = Number(local._syncRev || 0);
-  const remoteRev = Number(remote._syncRev || 0);
-  if (remoteRev <= localRev) {
-    return false;
-  }
-
-  const merged = deepMerge(deepMerge(structuredClone(defaultConfig), local), remote);
-  reapplyLocalBlobsAfterRemoteMerge(merged, local);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  return true;
 }
 
 function t(key) {
@@ -2050,7 +1871,7 @@ async function ensureRandomStockPhoto(options = {}) {
           fetchedAt: Date.now(),
           photos
         };
-        saveConfig({ bumpSyncRev: false });
+        saveConfig();
       }
     }
 
@@ -2087,7 +1908,7 @@ async function ensureRandomStockPhoto(options = {}) {
         triggerUnsplashDownload(pick);
       }
       renderBackground();
-      saveConfig({ bumpSyncRev: false });
+      saveConfig();
     }
   })();
 
@@ -2875,7 +2696,7 @@ function wireEvents() {
   els.exportSettings.addEventListener("click", exportSettings);
   els.resetSettings.addEventListener("click", () => {
     config = structuredClone(defaultConfig);
-    boot({ bumpSyncRevOnPersist: true });
+    boot();
   });
   els.importSettings.addEventListener("change", importSettings);
 
@@ -3386,7 +3207,7 @@ async function importSettings(event) {
   try {
     const text = await file.text();
     config = deepMerge(structuredClone(defaultConfig), JSON.parse(text));
-    boot({ bumpSyncRevOnPersist: true });
+    boot();
   } catch {
     alert("Invalid settings file");
   } finally {
